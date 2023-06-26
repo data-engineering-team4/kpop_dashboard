@@ -160,6 +160,7 @@ cython_debug/
 #.idea/
 
 .env
+.user.yml
 logs
 target/
 dbt_packages/

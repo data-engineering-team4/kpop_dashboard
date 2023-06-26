@@ -1,13 +1,13 @@
-kpop_dashboard:
+kpop:
   outputs:
     dev:
       account: yd48127.ap-northeast-2.aws
       database: dev
-      password: "{{ env_var('dbt_password') }}"
+      password: "{{ env_var('DBT_ENV_SECRET_PASSWORD') }}"
       role: accountadmin
       schema: public
       threads: 200
       type: snowflake
-      user: "{{ env_var('dbt_user') }}"
+      user: "{{ env_var('DBT_ENV_SECRET_USER') }}"
       warehouse: snowflake
   target: dev
