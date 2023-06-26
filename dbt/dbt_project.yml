@@ -1,0 +1,65 @@
+
+# Name your project! Project names should contain only lowercase characters
+# and underscores. A good package name should reflect your organization's
+# name or the intended use of these models
+name: 'kpop'
+version: '1.0.0'
+config-version: 2
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'kpop_dashboard'
+
+# These configurations specify where dbt should look for different types of files.
+# The `model-paths` config, for example, states that models in this project can be
+# found in the "models/" directory. You probably won't need to change these!
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+data-paths: ["data"]
+
+clean-targets:         # directories to be removed by `dbt clean`
+  - "target"
+  - "dbt_packages"
+
+anchors:
+  - &credentials
+    access_key_id: {{ env_var('access_key_id') }}
+    secret_access_key: {{ env_var('secret_access_key') }}
+
+# 초기 데이터 적재를 위한 S3 설정
+seeds:
+  spotify_charts:
+    enabled: true
+    quote_columns: false
+    data:
+      - source: s3
+        path: s3://your-bucket/seed_data.csv
+        schema: raw
+        credentials: *credentials
+
+#  S3 데이터 소스 설정
+sources:
+  - name: s3_source
+    databases:
+      - name: dev
+        quoting:
+          database: true
+    schema: raw
+    loader:
+      type: s3
+      bucket: spotify-kpop-analysis
+      region: us-west-2
+      credentials: *credentials
+
+# Configuring models
+# Full documentation: https://docs.getdbt.com/docs/configuring-models
+
+# In this example config, we tell dbt to build all models in the example/
+# directory as views. These settings can be overridden in the individual model
+# files using the `{{ config(...) }}` macro.
+models:
+  kpop_dashboard:
+
