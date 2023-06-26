@@ -23,19 +23,6 @@ clean-targets:         # directories to be removed by `dbt clean`
   - "target"
   - "dbt_packages"
 
-# 초기 데이터 적재를 위한 S3 설정
-seeds:
-  weekly_chart:
-    enabled: true
-    quote_columns: false
-    data:
-      - source: s3
-        path: s3://spotify-kpop-analysis/result_data/countries_weekly_top200_v7.csv
-        schema: raw
-        credentials:
-          access_key_id: "{{ env_var('AWS_ACCESS_KEY_ID') }}"
-          secret_access_key: "{{ env_var('AWS_SECRET_ACCESS_KEY') }}"
-
 # Configuring models
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
 
