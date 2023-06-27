@@ -5,6 +5,7 @@ from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 import json
 from math import ceil
+import time
 
 from utils import set_access_tokens, get_data, save_json_to_s3
 
@@ -82,33 +83,40 @@ def scraping_album(ti, num_partitions, partition_index):
 
     album_list = []
     album_id_list = []
+    error_artist_list = []
 
     num_artists = len(artist_list)
     group_size = ceil(num_artists / num_partitions)
     start_index = partition_index * group_size
     end_index = start_index + group_size
 
-
     for idx, artist_key in enumerate(artist_list[start_index:end_index]):
-        try:
+        offset = 0
+        limit = 50
+        while True:
             album_url = f"https://api.spotify.com/v1/artists/{artist_key}/albums"
             params = {
-                "offset": 0,
-                "limit": 50
+                "offset": offset,
+                "limit": limit
             }
             headers = {
                 "Authorization": f"Bearer {access_token}"
             }
             status_code, data = get_data(album_url, headers=headers, params=params)
-
             if status_code == 200:
                 total_album = data["total"]
                 for i, album in enumerate(data['items']):
                     album_id_list.append(album["id"])
                     album_list.append(album)
 
-        except Exception as e:
-            pass
+                if offset >= total_album:
+                    break
+                offset += limit
+            else:
+                error_artist_list.append(artist_key)
+                print("error") #todo 에러리스트에 넣어서 다시 하는 과정(429에러)
+                time.sleep(5)
+                break
 
     return album_list, album_id_list
 
@@ -116,7 +124,7 @@ def merge_album(**context):
     merged_album_data = []
 
     for i in range(1, 4):
-        album = context['task_instance'].xcom_pull(task_ids=f'scrape_album_{i}')
+        album = context['task_instance'].xcom_pull(task_ids=f'scrape_album_group.scrape_album_{i}')
         if album is not None:
             merged_album_data.extend(album)
 
@@ -184,6 +192,7 @@ with DAG(
                     'partition_index': i,
                 },
                 dag=dag,
+                do_xcom_push=True,
             )
 
     merge_album_task = PythonOperator(
