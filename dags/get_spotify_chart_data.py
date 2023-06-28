@@ -139,7 +139,7 @@ def transform_and_combine_csv_files(source_directory, target_directory, file_pat
     logging.info("loop files end")
     
     logging.info("save combined csv file")
-    new_filename = f"countries_weekly_top200_{date}.csv"
+    new_filename = f"countries_weekly_top200_{date}"
     new_file_path = os.path.join(target_directory, new_filename)
     combined_df.to_csv(new_file_path, index=False)
     
