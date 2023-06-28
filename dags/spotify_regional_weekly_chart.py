@@ -1,12 +1,10 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.empty import EmptyOperator
-from airflow.sensors.filesystem import FileSensor
 from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
+from operators.upload_files_to_s3_operator import UploadFilesToS3Operator
 from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
-from airflow.decorators import task
 from airflow.utils.task_group import TaskGroup
-from airflow.hooks.base import BaseHook
 from airflow.models import Variable
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -15,7 +13,6 @@ from datetime import datetime, timedelta
 import requests
 import logging
 import os
-import boto3
 import glob
 import pandas as pd
 
@@ -31,15 +28,14 @@ def delete_files(file_directory, file_pattern):
         os.remove(file)  
         
 def _get_csv_files(date, file_directory, file_pattern):
-    # countries = ["ar", "au", "at", "by", "be", "bo", "br", "bg", "ca", "cl", 
-    #          "co", "cr", "cy", "cz", "dk", "do", "ec", "ch", "cl", "de", 
-    #          "dk", "do", "ee", "eg", "es", "fi", "FR", "gb", "gr", "gt", 
-    #          "hk", "hn", "hu", "id", "ie", "il", "in", "is", "it", "jp", 
-    #          "kr", "kz", "lt", "lu", "lv", "ma", "mx", "my", "ng", "ni", 
-    #          "nl", "no", "nz", "pa", "pe", "ph", "pk", "pl", "pt", "py", 
-    #          "ro", "sa", "se", "sg", "sk", "sv", "th", "tr", "tw", "ua", 
-    #          "us", "uy", "ve", "vn", "za"]
-    countries = ['us','kr']
+    countries = ["ar", "au", "at", "by", "be", "bo", "br", "bg", "ca", "cl", 
+             "co", "cr", "cy", "cz", "dk", "do", "ec", "ch", "cl", "de", 
+             "dk", "do", "ee", "eg", "es", "fi", "FR", "gb", "gr", "gt", 
+             "hk", "hn", "hu", "id", "ie", "il", "in", "is", "it", "jp", 
+             "kr", "kz", "lt", "lu", "lv", "ma", "mx", "my", "ng", "ni", 
+             "nl", "no", "nz", "pa", "pe", "ph", "pk", "pl", "pt", "py", 
+             "ro", "sa", "se", "sg", "sk", "sv", "th", "tr", "tw", "ua", 
+             "us", "uy", "ve", "vn", "za"]
 
     logging.info(f'date : {date}')
     
@@ -141,37 +137,6 @@ def _transform_and_combine_csv_files(source_directory, target_directory, source_
     logging.info("save combined csv file")
     new_file_path = os.path.join(target_directory, target_file_pattern)
     combined_df.to_csv(new_file_path, index=False)
-    
-def _upload_files_to_s3(file_directory, file_pattern, bucket_name, folder_name):
-    
-    logging.info("get aws connection")
-    aws_conn = BaseHook.get_connection('aws_conn_id')
-    aws_access_key = aws_conn.login
-    aws_secret_key = aws_conn.password
-
-    logging.info("create s3 client")
-    s3 = boto3.client(
-        's3',
-        aws_access_key_id=aws_access_key,
-        aws_secret_access_key=aws_secret_key
-    )
-    
-    logging.info("get files from path")
-    files = get_files(file_directory, file_pattern)
-    
-    logging.info(f"path : {os.path.join(file_directory, file_pattern)}")
-    logging.info(f"files count : {len(files)}")
-    logging.info("loop files start")
-    
-    for file in files:
-        file_name = os.path.basename(file)
-        s3_key = os.path.join(folder_name, file_name)
-    
-        logging.info(f"upload file : {s3_key}")
-        with open(file, 'rb') as data:
-            s3.upload_fileobj(data, bucket_name, s3_key)
-        
-    logging.info("loop files end")  
 
 def _delete_uploaded_files(file_directory, file_pattern):
     delete_files(file_directory, file_pattern)
@@ -184,6 +149,7 @@ with DAG(
 ) as dag:
     date = '{{ ds }}'
     bucket_name = 'kpop-analysis'
+    aws_conn_id = 'aws_conn_id'
     source_folder_name = f'raw_data/spotify/chart/{date}'
     target_folder_name = f'transformed_data/spotify/chart/{date}'
     source_directory = os.getenv('AIRFLOW_HOME') + "/downloads"
@@ -203,10 +169,13 @@ with DAG(
         op_args=[date, source_directory, source_file_pattern],  
     )
     
-    upload_raw_files_to_s3 = PythonOperator(
+    upload_raw_files_to_s3 = UploadFilesToS3Operator(
         task_id='upload_raw_files_to_s3',
-        python_callable=_upload_files_to_s3,
-        op_args=[source_directory, source_file_pattern, bucket_name, source_folder_name],  
+        conn_id=aws_conn_id,
+        file_directory=source_directory,
+        file_pattern=source_file_pattern,
+        bucket_name=bucket_name,
+        folder_name=source_folder_name
     )
     
     with TaskGroup("process_raw_files", tooltip="process raw files") as process_raw_files:
@@ -216,10 +185,13 @@ with DAG(
             op_args=[source_directory, target_directory, source_file_pattern, target_file_pattern],  
         )
         
-        upload_transformed_files_to_s3 = PythonOperator(
+        upload_transformed_files_to_s3 = UploadFilesToS3Operator(
             task_id='upload_transformed_files_to_s3',
-            python_callable=_upload_files_to_s3,
-            op_args=[target_directory, target_file_pattern, bucket_name, target_folder_name],  
+            conn_id=aws_conn_id,
+            file_directory=target_directory,
+            file_pattern=target_file_pattern,
+            bucket_name=bucket_name,
+            folder_name=target_folder_name
         )
         
         check_transformed_file_exists = S3KeySensor(
