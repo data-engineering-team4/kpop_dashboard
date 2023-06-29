@@ -42,11 +42,13 @@ def get_data(url, headers, params):
 
     if status_code == 429:
         logging.warning(f"429 error occurred: {response.text}")
-        retry_after = response.headers.get('Retry-After')
+        retry_after = int(response.headers.get('Retry-After'))
         if retry_after:
             logging.info(f"Retrying after {retry_after} seconds.")
-            time.sleep(5)
+            time.sleep(retry_after)
             return get_data(url, headers, params)
+    elif status_code != 200:
+        logging.info("200도 아니고 429도 아닌", status_code)
 
     data = response.json()
     return status_code, data

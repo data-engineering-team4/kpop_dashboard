@@ -66,10 +66,6 @@ def scraping_kpop_artist(access_token):
             if offset >= total_artist:
                 break
 
-        else:
-            # response error
-            break
-
     redis_conn.set('artist_list', json.dumps(artist_list))
     redis_conn.set('artist_id_list', json.dumps(artist_id_list))
 
@@ -88,7 +84,6 @@ def scraping_album(ti, num_partitions, partition_index):
 
     album_list = []
     album_id_list = []
-    error_artist_list = []
 
     num_artists = len(artist_list)
     group_size = ceil(num_artists / num_partitions)
@@ -118,11 +113,6 @@ def scraping_album(ti, num_partitions, partition_index):
                 if offset >= total_album:
                     break
                 offset += limit
-            else:
-                error_artist_list.append(artist_key)
-                print("error") #todo 에러리스트에 넣어서 다시 하는 과정(429에러)
-                time.sleep(5)
-                break
     redis_conn.set(f'album_list_{partition_index}', json.dumps(album_list))
     redis_conn.set(f'album_id_list_{partition_index}', json.dumps(album_id_list))
 
@@ -156,7 +146,6 @@ def scraping_track(ti, num_partitions, partition_index):
 
     track_list = []
     track_id_list = []
-    error_track_list = []
 
     num_albums = len(album_list)
     group_size = ceil(num_albums / num_partitions)
@@ -184,11 +173,6 @@ def scraping_track(ti, num_partitions, partition_index):
                 if offset >= total_track:
                     break
                 offset += limit
-            else:
-                error_track_list.append(album_key)
-                print("error")
-                time.sleep(5)
-                break
 
     redis_conn.set(f'track_list_{partition_index}', json.dumps(track_list))
     redis_conn.set(f'track_id_list_{partition_index}', json.dumps(track_id_list))
@@ -223,7 +207,6 @@ def scraping_audio_features(ti, num_partitions, partition_index):
     access_token = Variable.get(access_token_key)
 
     audio_features_list = []
-    error_track_list = []
 
     num_tracks = len(track_id_list)
     group_size = ceil(num_tracks / num_partitions)
@@ -238,10 +221,6 @@ def scraping_audio_features(ti, num_partitions, partition_index):
         status_code, data = get_data(audio_features_url, headers=headers)
         if status_code == 200:
             audio_features_list.append(data)
-        else:
-            error_track_list.append(track_key)
-            logging.error(f"Error audio features {track_key}")
-            time.sleep(5)
 
     redis_conn.set(f'audio_features_list_{partition_index}', json.dumps(audio_features_list))
 
@@ -267,7 +246,8 @@ def load_audio_features(**context):
     save_json_to_s3(audio_features_list, s3_bucket, s3_key)
 
 def send_slack_message(ti, success):
-    slack_alert = SlackAlert(channel="#alert", token="") #각자 발급받은 token 집어넣기
+    slack_token = Variable.get('slack_token')
+    slack_alert = SlackAlert(channel="#alert", token=slack_token)
 
     if success:
         slack_alert.success_msg(ti)
@@ -285,8 +265,8 @@ def create_python_operator(task_id, python_callable, op_kwargs=None):
         dag=dag,
         do_xcom_push=True,
         op_kwargs=op_kwargs or {},
-        #on_success_callback=lambda ti: send_slack_message(ti, success=True),
-        #on_failure_callback=lambda ti: send_slack_message(ti, success=False)
+        on_success_callback=lambda ti: send_slack_message(ti, success=True),
+        on_failure_callback=lambda ti: send_slack_message(ti, success=False)
     )
 
 with DAG(
@@ -360,7 +340,7 @@ with DAG(
 
     load_audio_features_task = create_python_operator('load_audio_features_task', load_audio_features)
 
-    end_task = create_python_operator('end_task', end)
+    # end_task = create_python_operator('end_task', end)
 
     start_task >> scraping_kpop_artist_task
     scraping_kpop_artist_task >> [load_artists_task, scrape_album_group]
