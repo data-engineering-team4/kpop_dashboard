@@ -37,7 +37,9 @@ def scraping_kpop_artist(access_token):
 
     k_genre = ["k-pop", "k-pop girl group", "k-pop boy group", "k-rap", "korean r&b", "korean pop", "korean ost",
                "k-rap", "korean city pop", "classic k-pop", "korean singer-songwriter"]
-
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
     while True:
         params = {
             "q": "genre:K-pop",
@@ -46,9 +48,6 @@ def scraping_kpop_artist(access_token):
             "limit": limit  # 페이지 당 아티스트 수
         }
 
-        headers = {
-            "Authorization": f"Bearer {access_token}"
-        }
         status_code, data = get_data(search_url, headers=headers, params=params)
 
         if status_code == 200:
@@ -70,7 +69,7 @@ def scraping_kpop_artist(access_token):
     redis_conn.set('artist_id_list', json.dumps(artist_id_list))
 
 def load_kpop_artists(**context):
-    execution_date = context["execution_date"].strftime("%Y-%m-%d")
+    execution_date = context["execution_date"].strftime("%Y-%m-%d %H:%M")
     artist_list = json.loads(redis_conn.get('artist_list'))
     s3_bucket = Variable.get('s3_bucket')
     s3_key = f"artists/{execution_date}_artists.json"
@@ -89,6 +88,9 @@ def scraping_album(ti, num_partitions, partition_index):
     group_size = ceil(num_artists / num_partitions)
     start_index = partition_index * group_size
     end_index = start_index + group_size
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
 
     for idx, artist_key in enumerate(artist_list[start_index:end_index]):
         offset = 0
@@ -99,11 +101,8 @@ def scraping_album(ti, num_partitions, partition_index):
                 "offset": offset,
                 "limit": limit
             }
-            headers = {
-                "Authorization": f"Bearer {access_token}"
-            }
+
             status_code, data = get_data(album_url, headers=headers, params=params)
-            print(status_code, data)
             if status_code == 200:
                 total_album = data["total"]
                 for i, album in enumerate(data['items']):
@@ -128,7 +127,7 @@ def merge_album(**context):
     redis_conn.set('album_id_list', json.dumps(album_id_list))
 
 def load_album(**context):
-    execution_date = context["execution_date"].strftime("%Y-%m-%d")
+    execution_date = context["execution_date"].strftime("%Y-%m-%d %H:%M")
     merged_album_data = json.loads(redis_conn.get('merged_album_data'))
     if merged_album_data:
         album_list = merged_album_data
@@ -151,36 +150,31 @@ def scraping_track(ti, num_partitions, partition_index):
     group_size = ceil(num_albums / num_partitions)
     start_index = partition_index * group_size
     end_index = start_index + group_size
+    several_albums_url = "https://api.spotify.com/v1/albums"
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
 
-    for idx, album_key in enumerate(album_list[start_index:end_index]):
-        offset = 0
-        limit = 50
-        while True:
-            track_url = f"https://api.spotify.com/v1/albums/{album_key}/tracks"
-            params = {
-                "offset": offset,
-                "limit": limit
-            }
-            headers = {
-                "Authorization": f"Bearer {access_token}"
-            }
-            status_code, data = get_data(track_url, headers=headers, params=params)
-            if status_code == 200:
-                total_track = data["total"]
-                for track in data['items']:
+    for i in range(start_index, end_index, 20):
+        params = {
+            "offset": 0,
+            "limit": 50,
+            "ids": ','.join(album_list[i:i + 20])
+        }
+
+        status_code, data = get_data(several_albums_url, headers=headers, params=params)
+        if status_code == 200:
+            for album in data['albums']:
+                for track in album['tracks']['items']:
                     track_list.append(track)
                     track_id_list.append(track["id"])
-                if offset >= total_track:
-                    break
-                offset += limit
-
     redis_conn.set(f'track_list_{partition_index}', json.dumps(track_list))
     redis_conn.set(f'track_id_list_{partition_index}', json.dumps(track_id_list))
 
 def merge_track(**context):
     merged_track_data = []
     track_id_list = []
-    for i in range(1, 4):
+    for i in range(num_partitions):
         track_partition = json.loads(redis_conn.get(f'track_list_{i}'))
         track_id_partition = json.loads(redis_conn.get(f'track_id_list_{i}'))
         if track_partition is not None:
@@ -190,7 +184,7 @@ def merge_track(**context):
     redis_conn.set('track_id_list', json.dumps(track_id_list))
 
 def load_track(**context):
-    execution_date = context["execution_date"].strftime("%Y-%m-%d")
+    execution_date = context["execution_date"].strftime("%Y-%m-%d %H:%M")
     merged_track_data = json.loads(redis_conn.get('merged_track_data'))
     if merged_track_data:
         track_list = merged_track_data
@@ -212,22 +206,29 @@ def scraping_audio_features(ti, num_partitions, partition_index):
     group_size = ceil(num_tracks / num_partitions)
     start_index = partition_index * group_size
     end_index = start_index + group_size
+    several_audios_url = "https://api.spotify.com/v1/audio-features"
 
-    for idx, track_key in enumerate(track_id_list[start_index:end_index]):
-        audio_features_url = f"https://api.spotify.com/v1/audio-features/{track_key}"
-        headers = {
-            "Authorization": f"Bearer {access_token}"
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+    for i in range(start_index, end_index, 100):
+        track_ids = track_id_list[i:i + 100]
+        params = {
+            "ids": ','.join(track_ids)
         }
-        status_code, data = get_data(audio_features_url, headers=headers)
+
+        status_code, data = get_data(several_audios_url, headers=headers, params=params)
         if status_code == 200:
-            audio_features_list.append(data)
+            for audio in data['audio_features']:
+                if audio is not None:
+                    audio_features_list.extend(audio)
 
     redis_conn.set(f'audio_features_list_{partition_index}', json.dumps(audio_features_list))
 
 def merge_audio_features(**context):
     merged_audio_features_data = []
 
-    for i in range(1, num_partitions+1):
+    for i in range(num_partitions):
         audio_features_partition = json.loads(redis_conn.get(f'audio_features_list_{i}'))
         if audio_features_partition is not None:
             merged_audio_features_data.extend(audio_features_partition)
@@ -235,7 +236,7 @@ def merge_audio_features(**context):
     redis_conn.set('merged_audio_features_data', json.dumps(merged_audio_features_data))
 
 def load_audio_features(**context):
-    execution_date = context["execution_date"].strftime("%Y-%m-%d")
+    execution_date = context["execution_date"].strftime("%Y-%m-%d %H:%M")
     merged_audio_features_data = json.loads(redis_conn.get('merged_audio_features_data'))
     if merged_audio_features_data:
         audio_features_list = merged_audio_features_data

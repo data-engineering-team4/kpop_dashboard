@@ -36,7 +36,6 @@ def set_access_tokens(client_ids, client_secrets):
 
 def get_data(url, headers, params):
     response = requests.get(url, headers=headers, params=params)
-    logging.info(f"Response object: {response}")
     status_code = response.status_code
     logging.info(f"Status code: {status_code}")
 
