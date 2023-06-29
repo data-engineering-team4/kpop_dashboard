@@ -3,6 +3,8 @@ import requests
 import json
 from airflow.models import Variable
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+import logging
+import time
 
 def set_access_tokens(client_ids, client_secrets):
     """
@@ -32,7 +34,18 @@ def set_access_tokens(client_ids, client_secrets):
 
 def get_data(url, headers, params):
     response = requests.get(url, headers=headers, params=params)
+    logging.info(f"Response object: {response}")
     status_code = response.status_code
+    logging.info(f"Status code: {status_code}")
+
+    if status_code == 429:
+        logging.warning(f"429 error occurred: {response.text}")
+        retry_after = response.headers.get('Retry-After')
+        if retry_after:
+            logging.info(f"Retrying after {retry_after} seconds.")
+            time.sleep(5)
+            return get_data(url, headers, params)
+
     data = response.json()
     return status_code, data
 
