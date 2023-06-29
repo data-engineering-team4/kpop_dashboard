@@ -6,3 +6,4 @@ dbt-snowflake
 boto3
 docker
 pandas
+praw
