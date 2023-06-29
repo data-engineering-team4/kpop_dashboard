@@ -24,15 +24,15 @@ from utils import check_and_restart_selenium
 def _get_csv_files(date, file_directory, file_pattern):
     time.sleep(15)
       
-    # countries = ["ar", "au", "at", "by", "be", "bo", "br", "bg", "ca", "cl", 
-    #          "co", "cr", "cy", "cz", "dk", "do", "ec", "ch", "cl", "de", 
-    #          "dk", "do", "ee", "eg", "es", "fi", "FR", "gb", "gr", "gt", 
-    #          "hk", "hn", "hu", "id", "ie", "il", "in", "is", "it", "jp", 
-    #          "kr", "kz", "lt", "lu", "lv", "ma", "mx", "my", "ng", "ni", 
-    #          "nl", "no", "nz", "pa", "pe", "ph", "pk", "pl", "pt", "py", 
-    #          "ro", "sa", "se", "sg", "sk", "sv", "th", "tr", "tw", "ua", 
-    #          "us", "uy", "ve", "vn", "za"]
-    countries = ['kr']
+    countries = ["ar", "au", "at", "by", "be", "bo", "br", "bg", "ca", "cl", 
+             "co", "cr", "cy", "cz", "dk", "do", "ec", "ch", "cl", "de", 
+             "dk", "do", "ee", "eg", "es", "fi", "FR", "gb", "gr", "gt", 
+             "hk", "hn", "hu", "id", "ie", "il", "in", "is", "it", "jp", 
+             "kr", "kz", "lt", "lu", "lv", "ma", "mx", "my", "ng", "ni", 
+             "nl", "no", "nz", "pa", "pe", "ph", "pk", "pl", "pt", "py", 
+             "ro", "sa", "se", "sg", "sk", "sv", "th", "tr", "tw", "ua", 
+             "us", "uy", "ve", "vn", "za"]
+    # countries = ['kr']
 
     logging.info(f'date : {date}')
     
