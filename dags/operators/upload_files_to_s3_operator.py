@@ -18,7 +18,7 @@ class UploadFilesToS3Operator(BaseOperator):
     :type file_directory: str
 
     :param file_pattern: 디렉토리 내에서 일치해야 하는 파일 패턴. 
-                         이 패턴에 일치하는 파일만 업로드됩니다.
+                         이 패턴에 일치하는 파일만 '업로드됩니다.
     :type file_pattern: str
 
     :param bucket_name: 파일들을 업로드할 Amazon S3 버킷의 이름.
@@ -27,6 +27,7 @@ class UploadFilesToS3Operator(BaseOperator):
     :param folder_name: 버킷 내에서 파일들이 업로드될 위치.
     :type folder_name: str
     """
+    template_fields = ['file_directory','file_pattern','bucket_name','folder_name']
 
     @apply_defaults
     def __init__(

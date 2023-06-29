@@ -13,6 +13,7 @@ class DeleteFilesOperator(BaseOperator):
     :param file_pattern: 삭제할 파일들의 패턴
     :type file_pattern: str
     """
+    template_fields = ['file_directory','file_pattern']
 
     @apply_defaults
     def __init__(
