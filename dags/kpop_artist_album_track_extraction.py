@@ -20,7 +20,8 @@ from airflow.operators.python import PythonOperator
 from airflow.hooks.base import BaseHook
 from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
 
-from utils import set_access_tokens, get_data, save_json_to_s3
+from utils.spotify_util import set_access_tokens
+from utils.aws_util import save_json_to_s3
 
 # timezone 설정
 local_tz = pendulum.timezone("Asia/Seoul")
