@@ -9,6 +9,7 @@ import time
 import logging
 import redis
 from utils import set_access_tokens, get_data, save_json_to_s3
+from utils import SlackAlert
 
 num_partitions = 3
 redis_conn = redis.Redis(host='redis', port=6379, db=0)
@@ -265,6 +266,14 @@ def load_audio_features(**context):
     s3_key = f"audio_features/{execution_date}_audio_features.json"
     save_json_to_s3(audio_features_list, s3_bucket, s3_key)
 
+def send_slack_message(ti, success):
+    slack_alert = SlackAlert(channel="#alert", token="") #각자 발급받은 token 집어넣기
+
+    if success:
+        slack_alert.success_msg(ti)
+    else:
+        slack_alert.fail_msg(ti)
+
 def end(**context):
     pass
 
@@ -276,6 +285,8 @@ def create_python_operator(task_id, python_callable, op_kwargs=None):
         dag=dag,
         do_xcom_push=True,
         op_kwargs=op_kwargs or {},
+        #on_success_callback=lambda ti: send_slack_message(ti, success=True),
+        #on_failure_callback=lambda ti: send_slack_message(ti, success=False)
     )
 
 with DAG(

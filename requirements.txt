@@ -8,3 +8,4 @@ requests==2.31.0
 six==1.16.0
 spotipy==2.23.0
 urllib3==2.0.3
+slack-sdk==3.21.3
