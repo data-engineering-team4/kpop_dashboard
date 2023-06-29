@@ -1,1 +1,8 @@
 apache-airflow-providers-amazon
+apache-airflow-providers-snowflake
+selenium
+webdriver_manager
+dbt-snowflake
+boto3
+docker
+pandas
