@@ -2,6 +2,10 @@ import base64
 import json
 import requests
 from airflow.models import Variable
+import logging
+from requests.exceptions import RequestException
+from docker import DockerClient
+
 
 def set_access_tokens(client_ids, client_secrets) :
     """
@@ -53,4 +57,24 @@ def get_access_token():
     return {"Authorization" : f"Bearer {access_token}"}
 
 
-print(get_access_token())
+def check_and_restart_selenium():
+    client = DockerClient()
+    hub_url = 'http://remote_chromedriver:4444/status'
+    logging.info(hub_url)
+
+    def is_node_running():
+        try:
+            response = requests.get(hub_url)
+            status = response.json()
+            logging.info(status)
+            return status['value']['ready'] 
+        except RequestException:
+            return False
+
+    def restart_selenium_node():
+        selenium_container = client.containers.get('remote_chromedriver')
+        selenium_container.restart()
+        
+    if not is_node_running():
+        logging.info('Node is down or no available session. Restarting...')
+        restart_selenium_node()
