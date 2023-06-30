@@ -9,3 +9,10 @@ six==1.16.0
 spotipy==2.23.0
 urllib3==2.0.3
 slack-sdk==3.21.3
+apache-airflow-providers-snowflake
+selenium
+webdriver_manager
+dbt-snowflake
+boto3
+docker
+pandas
