@@ -1,5 +1,6 @@
 apache-airflow-providers-amazon
 apache-airflow-providers-snowflake
+boto3
 selenium
 webdriver_manager
 dbt-snowflake
