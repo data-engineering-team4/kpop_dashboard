@@ -3,6 +3,8 @@ from airflow.operators.python import PythonOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
 from operators.upload_files_to_s3_operator import UploadFilesToS3Operator
+from operators.delete_files_operator import DeleteFilesOperator
+from airflow.exceptions import AirflowFailException
 from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
 from airflow.utils.task_group import TaskGroup
 from airflow.models import Variable
@@ -10,24 +12,18 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 import time
 from datetime import datetime, timedelta
-import requests
 import logging
 import os
-import glob
 import pandas as pd
-
-def exists(path):
-    r = requests.head(path)
-    return r.status_code == requests.codes.ok
-
-def get_files(file_directory, file_pattern):
-    return glob.glob(os.path.join(file_directory, file_pattern))
-
-def delete_files(file_directory, file_pattern):
-    for file in get_files(file_directory, file_pattern): 
-        os.remove(file)  
+from utils import exists
+from utils import get_files
+from utils import delete_files
+from utils import save_files
+from utils import check_and_restart_selenium
         
 def _get_csv_files(date, file_directory, file_pattern):
+    time.sleep(15)
+      
     countries = ["ar", "au", "at", "by", "be", "bo", "br", "bg", "ca", "cl", 
              "co", "cr", "cy", "cz", "dk", "do", "ec", "ch", "cl", "de", 
              "dk", "do", "ee", "eg", "es", "fi", "FR", "gb", "gr", "gt", 
@@ -36,6 +32,7 @@ def _get_csv_files(date, file_directory, file_pattern):
              "nl", "no", "nz", "pa", "pe", "ph", "pk", "pl", "pt", "py", 
              "ro", "sa", "se", "sg", "sk", "sv", "th", "tr", "tw", "ua", 
              "us", "uy", "ve", "vn", "za"]
+    # countries = ['kr']
 
     logging.info(f'date : {date}')
     
@@ -53,9 +50,8 @@ def _get_csv_files(date, file_directory, file_pattern):
     options.add_argument('-headless')
     prefs = {"download.default_directory" : file_directory}
     options.add_experimental_option("prefs", prefs)
-    remote_webdriver = 'remote_chromedriver'
     
-    with webdriver.Remote(f'{remote_webdriver}:4444/wd/hub', options=options) as driver:
+    with webdriver.Remote('remote_chromedriver:4444/wd/hub', options=options) as driver:
         logging.info("scraping start")
         
         driver.get(f"https://charts.spotify.com/charts/view/regional-global-daily/{date}")
@@ -88,12 +84,14 @@ def _get_csv_files(date, file_directory, file_pattern):
                     csv_download_button = driver.find_element(By.XPATH, '//*[@id="__next"]/div/div/main/div[2]/div[3]/div/div/a/button')                                
                 except Exception as e:
                     logging.info(e)
-                    continue
+                    raise
                 logging.info(f"{country}-{date} csv file download")
                 csv_download_button.click()
                 count += 1
+        if count == 0:
+            raise AirflowFailException("File not found. DAG failed.")
         logging.info(f'total {count} files downloaded')  
-
+     
 def _transform_and_combine_csv_files(source_directory, target_directory, source_file_pattern, target_file_pattern):
     
     logging.info("create dataframe for integration")
@@ -135,11 +133,7 @@ def _transform_and_combine_csv_files(source_directory, target_directory, source_
     delete_files(target_directory, target_file_pattern)
     
     logging.info("save combined csv file")
-    new_file_path = os.path.join(target_directory, target_file_pattern)
-    combined_df.to_csv(new_file_path, index=False)
-
-def _delete_uploaded_files(file_directory, file_pattern):
-    delete_files(file_directory, file_pattern)
+    save_files(combined_df, target_directory, target_file_pattern)
 
 with DAG(
     dag_id='spotify_regional_weekly_chart',  
@@ -155,14 +149,45 @@ with DAG(
     source_directory = os.getenv('AIRFLOW_HOME') + "/downloads"
     target_directory = os.getenv('AIRFLOW_HOME') + "/data"
     source_file_pattern = f"regional-*-weekly-{date}.csv"
-    target_file_pattern = f"regional-weekly-{date}.csv"
+    target_file_pattern = f"country-weekly-{date}.csv"
     schema = 'raw'
-    table = 'regional_weekly_chart'
+    table = 'country_weekly_chart'
+    sql = f"""
+            BEGIN;
+
+            CREATE TEMPORARY TABLE temp_table AS 
+            SELECT 
+                $1 AS rank, 
+                $2 AS track_id, 
+                $3 AS artist_names, 
+                $4 AS track_name, 
+                $5 AS peak_rank, 
+                $6 AS previous_rank, 
+                $7 AS weeks_on_chart, 
+                $8 AS streams, 
+                $9 AS country_code, 
+                $10 AS chart_date
+            FROM @{schema}.transformed_data_stage_csv/spotify/chart/{date}/{target_file_pattern};
+            
+            DELETE FROM {schema}.{table} 
+            WHERE chart_date = '{date}';
+
+            INSERT INTO {schema}.{table} 
+            SELECT t.* 
+            FROM temp_table t;
+
+            COMMIT;
+            """
 
     start = EmptyOperator(
         task_id="start"
     )
     
+    check_and_restart_selenium_node = PythonOperator(
+        task_id='check_and_restart_selenium_node',
+        python_callable=check_and_restart_selenium
+    )
+
     get_csv_files = PythonOperator(
         task_id='get_csv_files',
         python_callable=_get_csv_files,
@@ -204,57 +229,31 @@ with DAG(
         
         transform_and_combine_csv_files >> upload_transformed_files_to_s3 >> check_transformed_file_exists 
         
-    
     load_s3_to_snowflake = SnowflakeOperator(
         task_id='load_s3_to_snowflake',
-        sql=f"""
-            BEGIN;
-
-            CREATE TEMPORARY TABLE temp_table AS 
-            SELECT 
-                $1 AS rank, 
-                $2 AS track_id, 
-                $3 AS artist_names, 
-                $4 AS track_name, 
-                $5 AS peak_rank, 
-                $6 AS previous_rank, 
-                $7 AS weeks_on_chart, 
-                $8 AS streams, 
-                $9 AS country_code, 
-                $10 AS chart_date
-            FROM @{schema}.transformed_data_stage_csv/spotify/chart/{date}/{target_file_pattern};
-            
-            DELETE FROM {schema}.{table} 
-            WHERE DATE(chart_date) = '{date}'::DATE;
-
-            INSERT INTO {schema}.{table} 
-            SELECT t.* 
-            FROM temp_table t;
-
-            COMMIT;
-            """,
-            
+        sql=sql,
         snowflake_conn_id='snowflake_conn_id',
         autocommit=False,
     )
     
     with TaskGroup("delete_files_from_container", tooltip="Delete the files from the container after they have been successfully loaded into S3") as delete_files_from_container:
-        delete_uploaded_raw_files = PythonOperator(
-            task_id='delete_uploaded_files',
-            python_callable=_delete_uploaded_files,
-            op_args=[source_directory, source_file_pattern],  
-        )
         
-        delete_uploaded_transformed_files = PythonOperator(
+        delete_uploaded_raw_files = DeleteFilesOperator(
+            task_id='delete_uploaded_raw_files',
+            file_directory=source_directory,
+            file_pattern=source_file_pattern,
+        )
+
+        delete_uploaded_transformed_files = DeleteFilesOperator(
             task_id='delete_uploaded_transformed_files',
-            python_callable=_delete_uploaded_files,
-            op_args=[target_directory, target_file_pattern],  
+            file_directory=target_directory,
+            file_pattern=target_file_pattern,
         )
-        [delete_uploaded_raw_files, delete_uploaded_transformed_files]
         
+        [delete_uploaded_raw_files, delete_uploaded_transformed_files]     
     
     end = EmptyOperator(
         task_id="end"
     )
     
-    start >> get_csv_files >> [upload_raw_files_to_s3, process_raw_files] >> load_s3_to_snowflake >> delete_files_from_container >> end
+    start >> check_and_restart_selenium_node >> get_csv_files >> [upload_raw_files_to_s3, process_raw_files] >> load_s3_to_snowflake >> delete_files_from_container >> end
