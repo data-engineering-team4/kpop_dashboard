@@ -15,10 +15,10 @@ from datetime import datetime, timedelta
 import logging
 import os
 import pandas as pd
-from utils import get_files
-from utils import delete_files
-from utils import save_files
-from utils import check_and_restart_selenium
+from utils.common_utils import get_files
+from utils.common_utils import delete_files
+from utils.common_utils import save_files
+from utils.spotify_util import check_and_restart_selenium
         
 def _get_csv_files(date, file_directory, file_pattern):
     time.sleep(15)
