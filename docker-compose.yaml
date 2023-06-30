@@ -80,6 +80,8 @@ x-airflow-common: &airflow-common
     - ${AIRFLOW_PROJ_DIR:-.}/downloads:/opt/airflow/downloads
     - ${AIRFLOW_PROJ_DIR:-.}/dbt:/dbt
     - /var/run/docker.sock:/var/run/docker.sock
+    - ${AIRFLOW_PROJ_DIR:-.}/connections.json:/opt/airflow/connections.json
+    - ${AIRFLOW_PROJ_DIR:-.}/variables.json:/opt/airflow/variables.json
 
   #user: "${AIRFLOW_UID:-50000}:0"
   user: root
