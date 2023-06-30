@@ -51,6 +51,3 @@ def get_access_token():
     access_token = json.loads(response.text)["access_token"]
     
     return {"Authorization" : f"Bearer {access_token}"}
-
-
-print(get_access_token())
