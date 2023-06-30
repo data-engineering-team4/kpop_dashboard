@@ -165,4 +165,5 @@ cython_debug/
 logs
 target/
 dbt_packages/
-Variables.json
+variables.json
+connections.json
