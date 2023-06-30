@@ -9,8 +9,9 @@ from math import ceil
 import time
 import logging
 import redis
-from utils import set_access_tokens, get_data, save_json_to_s3, get_sql_from_file
-from utils import SlackAlert
+from utils.slack_util import SlackAlert
+from utils.spotify_util import set_access_tokens, get_sql_from_file, get_data
+from utils.aws_util import save_json_to_s3
 import pendulum
 
 # timezone 설정
@@ -293,7 +294,7 @@ with DAG(
         }
     )
 
-    load_artists_snowflake_task = create_snowflake_operator('load_artists_snowflake_task', 'dags/sql/artist.sql')
+    load_artists_snowflake_task = create_snowflake_operator('load_artists_snowflake_task', 'dags/sql/artist.py')
 
     with TaskGroup("scrape_album_group") as scrape_album_group:
         for i in range(num_partitions):
@@ -317,7 +318,7 @@ with DAG(
         }
     )
 
-    load_albums_snowflake_task = create_snowflake_operator('load_albums_snowflake_task', 'dags/sql/album.sql')
+    load_albums_snowflake_task = create_snowflake_operator('load_albums_snowflake_task', 'dags/sql/album.py')
 
     with TaskGroup("scrape_track_group") as scrape_track_group:
         for i in range(num_partitions):
@@ -341,7 +342,7 @@ with DAG(
         }
     )
 
-    load_tracks_snowflake_task = create_snowflake_operator('load_tracks_snowflake_task', 'dags/sql/track.sql')
+    load_tracks_snowflake_task = create_snowflake_operator('load_tracks_snowflake_task', 'dags/sql/track.py')
 
     with TaskGroup("scrape_audio_features_group") as scrape_audio_features_group:
         for i in range(num_partitions):
