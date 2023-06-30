@@ -1,0 +1,5 @@
+FROM selenium/standalone-chrome
+
+USER root
+
+RUN mkdir -p /opt/airflow && mkdir /opt/airflow/downloads
