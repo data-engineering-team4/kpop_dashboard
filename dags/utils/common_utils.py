@@ -71,7 +71,8 @@ def load_all_jsons_into_list(path_to_json):
 
     """
     configs = []
-    for f_name in glob(path_to_json+ '/*.py'):
+    logging.info(path_to_json+ '/*.py')
+    for f_name in glob.glob(path_to_json+ '/*.py'):
         with open(f_name) as f:
             dict_text = f.read()
             try:
@@ -100,19 +101,20 @@ def find(table_name, table_confs):
             return table
     return None
 
-def get_sql(table_name, **params):
+def get_sql(table_name, sql_name, **params):
     """
-    주어진 테이블 이름과 매개변수를 사용하여 SQL 쿼리를 생성합니다.
+    주어진 테이블과 SQL 이름에 해당하는 SQL 쿼리를 가져옵니다.
 
     Args:
         table_name (str): 테이블 이름
-        **params: SQL 쿼리에서 사용할 매개변수
+        sql_name (str): SQL 이름
+        **params: SQL 쿼리에 사용될 동적 변수들
 
     Returns:
-        str: 생성된 SQL 쿼리
+        str: 포맷팅된 SQL 쿼리
 
     """
-    table_confs = load_all_jsons_into_list("opt/airflow/dags/config/")
+    table_confs = load_all_jsons_into_list("/opt/airflow/dags/config")
     table = find(table_name, table_confs)
-    sql = table["sql"].format(**params)
+    sql = table["sqls"][sql_name].format(**params)
     return sql    
