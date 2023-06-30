@@ -1,13 +1,12 @@
-
 # Name your project! Project names should contain only lowercase characters
 # and underscores. A good package name should reflect your organization's
 # name or the intended use of these models
-name: 'kpop'
-version: '1.0.0'
+name: "kpop"
+version: "1.0.0"
 config-version: 2
 
 # # This setting configures which "profile" dbt uses for this project.
-profile: 'kpop'
+profile: "kpop"
 
 # These configurations specify where dbt should look for different types of files.
 # The `model-paths` config, for example, states that models in this project can be
@@ -19,7 +18,7 @@ seed-paths: ["seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
-clean-targets:         # directories to be removed by `dbt clean`
+clean-targets: # directories to be removed by `dbt clean`
   - "target"
   - "dbt_packages"
 
@@ -30,5 +29,11 @@ clean-targets:         # directories to be removed by `dbt clean`
 # directory as views. These settings can be overridden in the individual model
 # files using the `{{ config(...) }}` macro.
 models:
-  kpop_dashboard:
-
+  kpop:
+    +materialized: view # 이 프로젝트의 테이블들은 기본적으로 view로 빌드
+    dim:
+      +materialized: table # dim 폴더 밑에 있는 테이블들은 모두 table로 빌드
+    src:
+      +materialized: ephemeral # CTE, 임시, src 테이블(view)들 삭제
+    analytics:
+      +materialized: table
