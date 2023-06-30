@@ -4,14 +4,16 @@ from datetime import datetime
 from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
+from airflow.operators.dummy_operator import DummyOperator
 import json
 from math import ceil
 import time
 import logging
 import redis
 from utils.slack_util import SlackAlert
-from utils.spotify_util import set_access_tokens, get_sql_from_file, get_data
+from utils.spotify_util import set_access_tokens, get_data
 from utils.aws_util import save_json_to_s3
+from utils.common_utils import get_sql
 import pendulum
 
 # timezone 설정
@@ -39,7 +41,7 @@ def get_partition_indices(total_count, num_partitions, partition_index):
     end_index = start_index + group_size
     return start_index, end_index
 
-def start(**kwargs):
+def token(**kwargs):
     client_ids = [
         Variable.get("client_id_1"),
         Variable.get("client_id_2"),
@@ -243,8 +245,6 @@ def send_slack_message(ti, success):
     else:
         slack_alert.fail_msg(ti)
 
-def end(**context):
-    pass
 
 def create_python_operator(task_id, python_callable, op_kwargs=None):
     return PythonOperator(
@@ -254,18 +254,18 @@ def create_python_operator(task_id, python_callable, op_kwargs=None):
         dag=dag,
         do_xcom_push=True,
         op_kwargs=op_kwargs or {},
-        on_success_callback=lambda ti: send_slack_message(ti, success=True),
+        # on_success_callback=lambda ti: send_slack_message(ti, success=True),
         on_failure_callback=lambda ti: send_slack_message(ti, success=False)
     )
 
-def create_snowflake_operator(task_id, file_path):
-    sql_query = get_sql_from_file(file_path).format(ymd=ymd)
+def create_snowflake_operator(task_id, sql):
     return SnowflakeOperator(
         task_id=task_id,
-        sql=sql_query,
+        sql=sql,
         snowflake_conn_id = "snowflake_conn_id",
         autocommit = False,
-        dag = dag
+        dag = dag,
+        on_failure_callback=lambda ti: send_slack_message(ti, success=False)
     )
 
 
@@ -277,7 +277,12 @@ with DAG(
     schedule_interval=None,
 ) as dag:
 
-    start_task = create_python_operator('start', start)
+    start_task = DummyOperator(
+        task_id='start',
+        dag=dag
+    )
+
+    token_task = create_python_operator('token', token)
 
     scraping_kpop_artist_task = create_python_operator(
         'scrape_kpop_artist_task',
@@ -294,7 +299,7 @@ with DAG(
         }
     )
 
-    load_artists_snowflake_task = create_snowflake_operator('load_artists_snowflake_task', 'dags/sql/artist.py')
+    load_artists_snowflake_task = create_snowflake_operator('load_artists_snowflake_task', get_sql('artist_data', 'load', ymd=ymd))
 
     with TaskGroup("scrape_album_group") as scrape_album_group:
         for i in range(num_partitions):
@@ -318,7 +323,7 @@ with DAG(
         }
     )
 
-    load_albums_snowflake_task = create_snowflake_operator('load_albums_snowflake_task', 'dags/sql/album.py')
+    load_albums_snowflake_task = create_snowflake_operator('load_albums_snowflake_task', get_sql('album_data', 'load', ymd=ymd))
 
     with TaskGroup("scrape_track_group") as scrape_track_group:
         for i in range(num_partitions):
@@ -342,7 +347,7 @@ with DAG(
         }
     )
 
-    load_tracks_snowflake_task = create_snowflake_operator('load_tracks_snowflake_task', 'dags/sql/track.py')
+    load_tracks_snowflake_task = create_snowflake_operator('load_tracks_snowflake_task', get_sql('track_data', 'load', ymd=ymd))
 
     with TaskGroup("scrape_audio_features_group") as scrape_audio_features_group:
         for i in range(num_partitions):
@@ -366,13 +371,16 @@ with DAG(
         }
     )
 
-    # end_task = create_python_operator('end_task', end)
+    end_task = DummyOperator(
+        task_id='end',
+        dag=dag
+    )
 
-    start_task >> scraping_kpop_artist_task
+    start_task >> token_task >> scraping_kpop_artist_task
     scraping_kpop_artist_task >> [load_artists_task, scrape_album_group]
     scrape_album_group >> merge_album_task >> load_album_task
     merge_album_task >> scrape_track_group >> merge_track_task >> load_track_task
-    merge_track_task >> scrape_audio_features_group >> merge_audio_features_task >> load_audio_features_task
+    merge_track_task >> scrape_audio_features_group >> merge_audio_features_task >> load_audio_features_task >> end_task
 
     load_artists_task >> load_artists_snowflake_task
     load_album_task >> load_albums_snowflake_task

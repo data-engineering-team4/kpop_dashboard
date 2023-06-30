@@ -66,7 +66,3 @@ def get_data(url, headers, params):
     data = response.json()
     return status_code, data
 
-def get_sql_from_file(file_path):
-    with open(file_path, 'r') as file:
-        return file.read()
-
