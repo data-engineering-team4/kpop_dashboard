@@ -2,4 +2,4 @@ FROM selenium/standalone-chrome
 
 USER root
 
-RUN mkdir /opt/airflow/downloads
+RUN mkdir -p /opt/airflow && mkdir /opt/airflow/downloads

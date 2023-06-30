@@ -79,8 +79,10 @@ x-airflow-common: &airflow-common
     - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data
     - ${AIRFLOW_PROJ_DIR:-.}/downloads:/opt/airflow/downloads
     - ${AIRFLOW_PROJ_DIR:-.}/dbt:/dbt
+    - /var/run/docker.sock:/var/run/docker.sock
 
-  user: "${AIRFLOW_UID:-50000}:0"
+  #user: "${AIRFLOW_UID:-50000}:0"
+  user: root
   depends_on: &airflow-common-depends-on
     redis:
       condition: service_healthy
@@ -306,6 +308,11 @@ services:
 
   selenium:
     container_name: remote_chromedriver
+    environment:
+      - START_XVFB=false
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_NODE_MAX_SESSIONS=5
+      - JAVA_OPTS=-XX:ActiveProcessorCount=5
     build:
       context: .
       dockerfile: Dockerfile-selenium

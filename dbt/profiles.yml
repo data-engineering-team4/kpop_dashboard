@@ -6,8 +6,8 @@ kpop:
       password: "{{ env_var('DBT_ENV_SECRET_PASSWORD') }}"
       role: accountadmin
       schema: public
-      threads: 200
+      threads: 20
       type: snowflake
       user: "{{ env_var('DBT_ENV_SECRET_USER') }}"
-      warehouse: snowflake
+      warehouse: COMPUTE_WH
   target: dev
