@@ -30,10 +30,10 @@ clean-targets: # directories to be removed by `dbt clean`
 # files using the `{{ config(...) }}` macro.
 models:
   kpop:
-    +materialized: view # 이 프로젝트의 테이블들은 기본적으로 view로 빌드
+    +materialized: view
     dim:
-      +materialized: table # dim 폴더 밑에 있는 테이블들은 모두 table로 빌드
+      +materialized: table
     src:
-      +materialized: ephemeral # CTE, 임시, src 테이블(view)들 삭제
+      +materialized: ephemeral
     analytics:
       +materialized: table

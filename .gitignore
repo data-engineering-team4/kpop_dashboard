@@ -167,3 +167,4 @@ target/
 dbt_packages/
 variables.json
 connections.json
+.DS_Store
