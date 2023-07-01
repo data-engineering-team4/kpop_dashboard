@@ -13,7 +13,7 @@ import redis
 from utils.slack_util import SlackAlert
 from utils.spotify_util import set_access_tokens, get_data
 from utils.aws_util import save_json_to_s3, create_s3_client
-from utils.common_utils import get_sql, get_sql_from_file
+from utils.common_util import get_sql, get_sql_from_file
 import pendulum
 
 # timezone 설정
