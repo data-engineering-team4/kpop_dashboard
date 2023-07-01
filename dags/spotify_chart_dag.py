@@ -12,6 +12,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 import time
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 import logging
 import os
 import pandas as pd
@@ -107,7 +108,20 @@ def _get_csv_files(table_name, date, file_directory, file_pattern):
             if count == 0:
                 raise AirflowFailException("File not found. DAG failed.")
             logging.info(f'total {count} files downloaded') 
+        
+        elif table_name == 'global_yearly_chart':
+            url = f"https://charts.spotify.com/charts/view/regional-global-daily/{date}"
+            driver.get(url)
+            time.sleep(2)
             
+            csv_download_button = None
+            try:
+                csv_download_button = driver.find_element(By.XPATH, '//*[@id="__next"]/div/div/main/div[2]/div[3]/div/div/a/button')                                
+            except Exception as e:
+                logging.info(e)
+                raise AirflowFailException("No such element. DAG failed")
+            csv_download_button.click()  
+            logging.info(f'files download complete')  
 
 def _transform_and_combine_csv_files(table_name, source_directory, target_directory, source_file_pattern, target_file_pattern):
     
@@ -115,7 +129,7 @@ def _transform_and_combine_csv_files(table_name, source_directory, target_direct
     header = ['rank','track_id','artist_names','track_name','peak_rank','previous_rank','weeks_on_chart','streams', 'country_code','chart_date']
     files = get_files(source_directory, source_file_pattern)
     
-    if table_name == 'global_weekly_chart':
+    if table_name == 'global_weekly_chart' or table_name == 'global_yearly_chart':
         df = pd.DataFrame(columns=header)
         # 파일명을 기반으로 국가명과 일자 정보를 추출하여 데이터에 추가
         file_name = os.path.basename(files[0])
@@ -185,8 +199,8 @@ def _transform_and_combine_csv_files(table_name, source_directory, target_direct
         save_files(combined_df, target_directory, target_file_pattern)
     
 # 파라미터화된 DAG 생성 함수
-def create_dag(**params):
-    date = '{{ ds }}'
+def create_dag(start_date, schedule_interval, **params):
+    date = '{{ macros.ds_add(ds, -2) }}'
     airflow_home = os.getenv('AIRFLOW_HOME')
     aws_conn_id = 'aws_conn_id'
     bucket_name = 'kpop-analysis'
@@ -204,12 +218,12 @@ def create_dag(**params):
         'retries': 1,
         'retry_delay': timedelta(minutes=5),
     }
-
+    
     with DAG(
         dag_id=f'spotify_{table_name}_dag',  
-        start_date=datetime(2023, 6, 29),
-        schedule_interval=timedelta(days=7),  # 실행 간격
-        catchup=False,
+        start_date=start_date,
+        schedule_interval=schedule_interval,  # 실행 간격
+        catchup=True,
         default_args=default_args
     ) as dag:
         
@@ -293,9 +307,16 @@ def create_dag(**params):
 
 
 # 테이블에 따른 파라미터화된 DAG 생성
-tables = ['country_weekly_chart', 'global_weekly_chart']
+tables = ['country_weekly_chart', 'global_weekly_chart', 'global_yearly_chart']
 
 for table in tables:
     dag_params = get_table_info(table, 'dag_params')
-    dag = create_dag(**dag_params)
+    
+    if table in ['global_weekly_chart', 'country_weekly_chart']:
+        start_date = datetime(2023, 7, 1)
+        schedule_interval = timedelta(weeks=1)
+    elif table == 'global_yearly_chart':
+        start_date = datetime(2023, 5, 3)
+        schedule_interval = relativedelta(months=1)        
+    dag = create_dag(start_date, schedule_interval, **dag_params)
 
