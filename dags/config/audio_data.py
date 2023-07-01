@@ -1,10 +1,15 @@
-USE SCHEMA raw;
-
+{
+    'schema': 'raw',
+    'table': 'audio_data',
+    'sqls': {
+        'load': """
+            USE SCHEMA raw;
+            
             -- 파일 임시 저장 위치 (stage) 생성
             CREATE or replace STAGE raw_data_stage
                 STORAGE_INTEGRATION = s3_int
                 URL = 's3://kpop-analysis/raw_data/';
-
+            
             CREATE OR REPLACE TABLE audio_data (
                 danceability FLOAT,
                 energy FLOAT,
@@ -25,7 +30,7 @@ USE SCHEMA raw;
                 duration_ms INTEGER,
                 time_signature INTEGER
             );
-
+            
             COPY INTO audio_data
             FROM (
                 SELECT
@@ -50,3 +55,5 @@ USE SCHEMA raw;
                 FROM '@raw_data_stage/spotify/api/audio_features/{ymd}/'
             )
             FILE_FORMAT = (TYPE = JSON);
+    """}
+}
