@@ -1,7 +1,8 @@
 from datetime import datetime
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from utils.common_utils import get_sql
+from operators.log_operator import LogOperator
+from utils.common_util import get_sql
 import logging
 
 default_args = {
@@ -10,13 +11,11 @@ default_args = {
 }
 
 with DAG('sql_test_dag', schedule_interval='@once', default_args=default_args, tags=['example']) as dag:
-    def main():
-        sql = get_sql('country_weekly_chart', 'test_sql', date='2023-06-22', target_file_pattern='country-weekly-2023-06-30.csv')
-        logging.info(sql)
+    sql = get_sql('country_weekly_chart', 'test_sql', date='{{ds}}', target_file_pattern='country-weekly-2023-06-30.csv')
 
-    run_task = PythonOperator(
+    log_test = LogOperator(
         task_id='run_main',
-        python_callable=main,
+        param=sql,
     )
 
-    run_task
+    log_test

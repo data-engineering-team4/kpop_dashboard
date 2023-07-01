@@ -118,3 +118,19 @@ def get_sql(table_name, sql_name, **params):
     table = find(table_name, table_confs)
     sql = table["sqls"][sql_name].format(**params)
     return sql    
+
+def get_table_info(table_name, key):
+    """
+    주어진 테이블의 key에 해당하는 값을 가져옵니다.
+
+    Args:
+        table_name (str): 테이블 이름
+        key (str): key 이름
+
+    Returns:
+        any: key에 해당하는 값
+
+    """
+    table_confs = load_all_jsons_into_list("/opt/airflow/dags/config")
+    table = find(table_name, table_confs)
+    return table[key]
