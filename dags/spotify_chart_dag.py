@@ -299,6 +299,4 @@ tables = ['country_weekly_chart', 'global_weekly_chart']
 for table in tables:
     dag_params = get_table_info(table, 'dag_params')
     dag = create_dag(**dag_params)
-else:
-    print(f"SQL not found for table: {table}")
 
