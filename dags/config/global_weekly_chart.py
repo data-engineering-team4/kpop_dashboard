@@ -26,7 +26,47 @@
                         FROM temp_table t;
 
                         COMMIT;
-                    """
+                    """,
+        'get_top_10':"""
+                        SELECT DISTINCT track_id
+                        FROM raw.global_weekly_chart
+                        WHERE rank <= 10
+                        LIMIT 100
+                        ;
+                    """,
+        'load_top_10':"""
+                        USE SCHEMA raw; 
+                        BEGIN;
+
+                        COPY INTO GLOBAL_FAMOUS_AUDIO_DATA 
+                        FROM (
+                                SELECT
+                                    $1:danceability,
+                                    $1:energy,
+                                    $1:key,
+                                    $1:loudness,
+                                    $1:mode,
+                                    $1:speechiness,
+                                    $1:acousticness,
+                                    $1:instrumentalness,
+                                    $1:liveness,
+                                    $1:valence,
+                                    $1:tempo,
+                                    $1:type,
+                                    $1:id,
+                                    $1:uri,
+                                    $1:track_href,
+                                    $1:analysis_url,
+                                    $1:duration_ms,
+                                    $1:time_signature,
+                                    '{date}' as recorded_at
+                                FROM @raw_data_stage/spotify/api/{key}/{date}/)
+                        FILE_FORMAT = (TYPE = JSON)
+                        ;
+
+                        COMMIT;
+        
+        """
     },
     'dag_params':{
         'table_name':'global_weekly_chart',
