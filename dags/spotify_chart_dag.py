@@ -186,8 +186,7 @@ def _transform_and_combine_csv_files(table_name, source_directory, target_direct
     
 # 파라미터화된 DAG 생성 함수
 def create_dag(**params):
-    # date = '{{ ds }}'
-    date = '2023-06-29'
+    date = '{{ ds }}'
     airflow_home = os.getenv('AIRFLOW_HOME')
     aws_conn_id = 'aws_conn_id'
     bucket_name = 'kpop-analysis'
