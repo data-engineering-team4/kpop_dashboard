@@ -117,4 +117,8 @@ def get_sql(table_name, sql_name, **params):
     table_confs = load_all_jsons_into_list("/opt/airflow/dags/config")
     table = find(table_name, table_confs)
     sql = table["sqls"][sql_name].format(**params)
-    return sql    
+    return sql
+
+def get_sql_from_file(file_path):
+    with open(file_path, 'r') as file:
+        return file.read()

@@ -12,8 +12,8 @@ import logging
 import redis
 from utils.slack_util import SlackAlert
 from utils.spotify_util import set_access_tokens, get_data
-from utils.aws_util import save_json_to_s3
-from utils.common_utils import get_sql
+from utils.aws_util import save_json_to_s3, create_s3_client
+from utils.common_utils import get_sql, get_sql_from_file
 import pendulum
 
 # timezone 설정
@@ -22,7 +22,7 @@ local_tz = pendulum.timezone("Asia/Seoul")
 now = datetime.now(tz=local_tz)
 ymd = str(now.year) + '-' + str(now.month).zfill(2) + '-' + str(now.day).zfill(2)
 timestamp = now.strftime('%Y-%m-%d_%H:%M:%S')
-num_partitions = 2
+num_partitions = 3
 redis_conn = redis.Redis(host='redis', port=6379, db=0)
 s3_bucket = Variable.get('s3_bucket')
 
@@ -65,6 +65,7 @@ def scraping_kpop_artist(access_token):
     headers = {
         "Authorization": f"Bearer {access_token}"
     }
+    s3_client = create_s3_client('aws_conn_id')
 
     while True:
         params = {
@@ -83,6 +84,7 @@ def scraping_kpop_artist(access_token):
                     continue
                 artist_id_list.append(artist["id"])
                 artist_list.append(artist)
+                save_json_to_s3(artist, s3_bucket, "artists", ymd, str(artist['id']), s3_client)
 
             offset += limit
             if offset >= total_artist:
@@ -91,19 +93,16 @@ def scraping_kpop_artist(access_token):
     redis_conn.set('artist_list', json.dumps(artist_list))
     redis_conn.set('artist_id_list', json.dumps(artist_id_list))
 
-def load_data_to_s3(data_key, key, **context):
-    data = json.loads(redis_conn.get(data_key))
-    save_json_to_s3(data, s3_bucket, key, ymd, context)
 
 def scraping_album(ti, num_partitions, partition_index):
     artist_list = json.loads(redis_conn.get('artist_id_list'))
     access_token = get_access_token(partition_index)
-    album_list = []
     album_id_list = []
     start_index, end_index = get_partition_indices(len(artist_list), num_partitions, partition_index)
     headers = {
         "Authorization": f"Bearer {access_token}"
     }
+    s3_client = create_s3_client('aws_conn_id')
 
     for idx, artist_key in enumerate(artist_list[start_index:end_index]):
         offset = 0
@@ -121,38 +120,35 @@ def scraping_album(ti, num_partitions, partition_index):
 
                 for i, album in enumerate(data['items']):
                     album_id_list.append(album["id"])
-                    album_list.append(album)
+                    save_json_to_s3(album, s3_bucket, "albums", ymd, str(album['id']),s3_client)
 
                 if offset >= total_album:
                     break
                 offset += limit
 
-    redis_conn.set(f'album_list_{partition_index}', json.dumps(album_list))
     redis_conn.set(f'album_id_list_{partition_index}', json.dumps(album_id_list))
 
 def merge_album(**context):
-    merged_album_data = []
     album_id_list = []
 
     for i in range(num_partitions):
-        album_list_partition = json.loads(redis_conn.get(f'album_list_{i}'))
-        album_id_list_partition = json.loads(redis_conn.get(f'album_id_list_{i}'))
-        merged_album_data.extend(album_list_partition)
-        album_id_list.extend(album_id_list_partition)
+        album_id_list_partition = redis_conn.get(f'album_id_list_{i}')
+        if album_id_list_partition is not None:
+            album_id_list_partition = json.loads(redis_conn.get(f'album_id_list_{i}'))
+            album_id_list.extend(album_id_list_partition)
 
-    redis_conn.set('merged_album_data', json.dumps(merged_album_data))
     redis_conn.set('album_id_list', json.dumps(album_id_list))
 
 def scraping_track(ti, num_partitions, partition_index):
     album_list = json.loads(redis_conn.get('album_id_list'))
     access_token = get_access_token(partition_index)
-    track_list = []
     track_id_list = []
     start_index, end_index = get_partition_indices(len(album_list), num_partitions, partition_index)
     several_albums_url = "https://api.spotify.com/v1/albums"
     headers = {
         "Authorization": f"Bearer {access_token}"
     }
+    s3_client = create_s3_client('aws_conn_id')
 
     for i in range(start_index, end_index, 20):
         params = {
@@ -164,35 +160,29 @@ def scraping_track(ti, num_partitions, partition_index):
         if status_code == 200:
             for album in data['albums']:
                 for track in album['tracks']['items']:
-                    track_list.append(track)
+                    save_json_to_s3(track, s3_bucket, "tracks", ymd, str(track['id']),s3_client)
                     track_id_list.append(track["id"])
 
-    redis_conn.set(f'track_list_{partition_index}', json.dumps(track_list))
     redis_conn.set(f'track_id_list_{partition_index}', json.dumps(track_id_list))
 
 def merge_track(**context):
-    merged_track_data = []
     track_id_list = []
 
     for i in range(num_partitions):
-        track_partition = json.loads(redis_conn.get(f'track_list_{i}'))
         track_id_partition = json.loads(redis_conn.get(f'track_id_list_{i}'))
-        if track_partition is not None:
-            merged_track_data.extend(track_partition)
-            track_id_list.extend(track_id_partition)
+        track_id_list.extend(track_id_partition)
 
-    redis_conn.set('merged_track_data', json.dumps(merged_track_data))
     redis_conn.set('track_id_list', json.dumps(track_id_list))
 
 def scraping_audio_features(ti, num_partitions, partition_index):
     track_id_list = json.loads(redis_conn.get('track_id_list'))
     access_token = get_access_token(partition_index)
-    audio_features_list = []
     start_index, end_index = get_partition_indices(len(track_id_list), num_partitions, partition_index)
     several_audios_url = "https://api.spotify.com/v1/audio-features"
     headers = {
         "Authorization": f"Bearer {access_token}"
     }
+    s3_client = create_s3_client('aws_conn_id')
 
     for i in range(start_index, end_index, 100):
         track_ids = track_id_list[i:i + 100]
@@ -223,19 +213,7 @@ def scraping_audio_features(ti, num_partitions, partition_index):
                         "duration_ms": audio.get("duration_ms"),
                         "time_signature": audio.get("time_signature")
                     }
-                    audio_features_list.extend(audio_data)
-
-    redis_conn.set(f'audio_features_list_{partition_index}', json.dumps(audio_features_list))
-
-def merge_audio_features(**context):
-    merged_audio_features_data = []
-
-    for i in range(num_partitions):
-        audio_features_partition = json.loads(redis_conn.get(f'audio_features_list_{i}'))
-        if audio_features_partition is not None:
-            merged_audio_features_data.extend(audio_features_partition)
-
-    redis_conn.set('merged_audio_features_data', json.dumps(merged_audio_features_data))
+                    save_json_to_s3(audio, s3_bucket, "audio_features", ymd, str(audio['id']),s3_client)
 
 def send_slack_message(ti, success):
     slack_token = Variable.get('slack_token')
@@ -258,16 +236,24 @@ def create_python_operator(task_id, python_callable, op_kwargs=None):
         on_failure_callback=lambda ti: send_slack_message(ti, success=False)
     )
 
-def create_snowflake_operator(task_id, sql):
+def create_snowflake_operator(task_id, file_path):
+    sql_query = get_sql_from_file(file_path).format(ymd=ymd)
     return SnowflakeOperator(
         task_id=task_id,
-        sql=sql,
+        sql=sql_query,
         snowflake_conn_id = "snowflake_conn_id",
         autocommit = False,
         dag = dag,
         on_failure_callback=lambda ti: send_slack_message(ti, success=False)
     )
 
+def create_dummy_operator(task_id):
+    return DummyOperator(
+        task_id=task_id,
+        dag=dag,
+        on_success_callback=lambda ti: send_slack_message(ti, success=True),
+        on_failure_callback=lambda ti: send_slack_message(ti, success=False)
+    )
 
 with DAG(
     dag_id = 'kpop_artist_album_track_extraction',
@@ -277,10 +263,7 @@ with DAG(
     schedule_interval=None,
 ) as dag:
 
-    start_task = DummyOperator(
-        task_id='start',
-        dag=dag
-    )
+    start_task = create_dummy_operator('start')
 
     token_task = create_python_operator('token', token)
 
@@ -290,16 +273,8 @@ with DAG(
         op_kwargs={'access_token': "{{ var.value.get('access_token_1') }}"}
     )
 
-    load_artists_task = create_python_operator(
-        task_id='load_artists_task',
-        python_callable=load_data_to_s3,
-        op_kwargs={
-            'data_key': 'artist_list',
-            'key': 'artists'
-        }
-    )
+    load_artists_task = create_snowflake_operator('load_artists_task', 'dags/config/artist.sql')
 
-    load_artists_snowflake_task = create_snowflake_operator('load_artists_snowflake_task', get_sql('artist_data', 'load', ymd=ymd))
 
     with TaskGroup("scrape_album_group") as scrape_album_group:
         for i in range(num_partitions):
@@ -314,16 +289,8 @@ with DAG(
 
     merge_album_task = create_python_operator('merge_album_task', merge_album)
 
-    load_album_task = create_python_operator(
-        task_id='load_album_task',
-        python_callable=load_data_to_s3,
-        op_kwargs={
-            'data_key': 'merged_album_data',
-            'key': 'albums'
-        }
-    )
+    load_albums_task = create_snowflake_operator('load_albums_task', 'dags/config/album.sql')
 
-    load_albums_snowflake_task = create_snowflake_operator('load_albums_snowflake_task', get_sql('album_data', 'load', ymd=ymd))
 
     with TaskGroup("scrape_track_group") as scrape_track_group:
         for i in range(num_partitions):
@@ -338,16 +305,7 @@ with DAG(
 
     merge_track_task = create_python_operator('merge_track_task', merge_track)
 
-    load_track_task = create_python_operator(
-        task_id='load_track_task',
-        python_callable=load_data_to_s3,
-        op_kwargs={
-            'data_key': 'merged_track_data',
-            'key': 'tracks'
-        }
-    )
-
-    load_tracks_snowflake_task = create_snowflake_operator('load_tracks_snowflake_task', get_sql('track_data', 'load', ymd=ymd))
+    load_tracks_task = create_snowflake_operator('load_tracks_task', 'dags/config/track.sql')
 
     with TaskGroup("scrape_audio_features_group") as scrape_audio_features_group:
         for i in range(num_partitions):
@@ -360,29 +318,12 @@ with DAG(
                 }
             )
 
-    merge_audio_features_task = create_python_operator('merge_audio_features_task', merge_audio_features)
+    load_audio_features_task = create_snowflake_operator('load_audio_features_task', 'dags/config/audio.sql')
 
-    load_audio_features_task = create_python_operator(
-        task_id='load_audio_features_task',
-        python_callable=load_data_to_s3,
-        op_kwargs={
-            'data_key': 'merged_audio_features_data',
-            'key': 'audio_features'
-        }
-    )
-
-    end_task = DummyOperator(
-        task_id='end',
-        dag=dag
-    )
+    end_task = create_dummy_operator('end')
 
     start_task >> token_task >> scraping_kpop_artist_task
     scraping_kpop_artist_task >> [load_artists_task, scrape_album_group]
-    scrape_album_group >> merge_album_task >> load_album_task
-    merge_album_task >> scrape_track_group >> merge_track_task >> load_track_task
-    merge_track_task >> scrape_audio_features_group >> merge_audio_features_task >> load_audio_features_task >> end_task
-
-    load_artists_task >> load_artists_snowflake_task
-    load_album_task >> load_albums_snowflake_task
-    load_track_task >> load_tracks_snowflake_task
-    # todo branch operator
+    scrape_album_group >> merge_album_task >> load_albums_task
+    merge_album_task >> scrape_track_group >> merge_track_task >> load_tracks_task
+    merge_track_task >> scrape_audio_features_group >> load_audio_features_task >> end_task
