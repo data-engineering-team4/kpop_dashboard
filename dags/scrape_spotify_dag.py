@@ -138,6 +138,7 @@ def merge_album(**context):
             album_id_list.extend(album_id_list_partition)
 
     redis_conn.set('album_id_list', json.dumps(album_id_list))
+    token()
 
 def scraping_track(ti, num_partitions, partition_index):
     album_list = json.loads(redis_conn.get('album_id_list'))
@@ -159,9 +160,12 @@ def scraping_track(ti, num_partitions, partition_index):
         status_code, data = get_data(several_albums_url, headers=headers, params=params)
         if status_code == 200:
             for album in data['albums']:
-                for track in album['tracks']['items']:
-                    save_json_to_s3(track, s3_bucket, "tracks", ymd, str(track['id']),s3_client)
-                    track_id_list.append(track["id"])
+                try:
+                    for track in album['tracks']['items']:
+                        save_json_to_s3(track, s3_bucket, "tracks", ymd, str(track['id']),s3_client)
+                        track_id_list.append(track["id"])
+                except Exception:
+                    logging.error("error")
 
     redis_conn.set(f'track_id_list_{partition_index}', json.dumps(track_id_list))
 
@@ -173,6 +177,7 @@ def merge_track(**context):
         track_id_list.extend(track_id_partition)
 
     redis_conn.set('track_id_list', json.dumps(track_id_list))
+    token()
 
 def scraping_audio_features(ti, num_partitions, partition_index):
     track_id_list = json.loads(redis_conn.get('track_id_list'))
@@ -237,6 +242,7 @@ def create_python_operator(task_id, python_callable, op_kwargs=None):
     )
 
 def create_snowflake_operator(task_id, file_path):
+    # sql_query = get_sql(file_path, 'load', ymd=ymd)
     sql_query = get_sql_from_file(file_path).format(ymd=ymd)
     return SnowflakeOperator(
         task_id=task_id,
@@ -273,8 +279,8 @@ with DAG(
         op_kwargs={'access_token': "{{ var.value.get('access_token_1') }}"}
     )
 
+    # load_artists_task = create_snowflake_operator('load_artists_task', 'artist_data')
     load_artists_task = create_snowflake_operator('load_artists_task', 'dags/config/artist.sql')
-
 
     with TaskGroup("scrape_album_group") as scrape_album_group:
         for i in range(num_partitions):
@@ -289,8 +295,8 @@ with DAG(
 
     merge_album_task = create_python_operator('merge_album_task', merge_album)
 
+    # load_albums_task = create_snowflake_operator('load_albums_task', 'album_data')
     load_albums_task = create_snowflake_operator('load_albums_task', 'dags/config/album.sql')
-
 
     with TaskGroup("scrape_track_group") as scrape_track_group:
         for i in range(num_partitions):
@@ -305,6 +311,7 @@ with DAG(
 
     merge_track_task = create_python_operator('merge_track_task', merge_track)
 
+    # load_tracks_task = create_snowflake_operator('load_tracks_task', 'track_data')
     load_tracks_task = create_snowflake_operator('load_tracks_task', 'dags/config/track.sql')
 
     with TaskGroup("scrape_audio_features_group") as scrape_audio_features_group:
@@ -318,6 +325,7 @@ with DAG(
                 }
             )
 
+    # load_audio_features_task = create_snowflake_operator('load_audio_features_task', 'audio_data')
     load_audio_features_task = create_snowflake_operator('load_audio_features_task', 'dags/config/audio.sql')
 
     end_task = create_dummy_operator('end')
