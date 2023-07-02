@@ -1,4 +1,9 @@
- USE SCHEMA raw;
+{
+    'schema': 'raw',
+    'table': 'track_data',
+    'sqls': {
+        'load': """
+            USE SCHEMA raw;
             -- 파일 임시 저장 위치 (stage) 생성
             CREATE or replace STAGE raw_data_stage
                 STORAGE_INTEGRATION = s3_int
@@ -39,3 +44,5 @@
                 FROM '@raw_data_stage/spotify/api/tracks/{ymd}/'
                 )
             FILE_FORMAT = (TYPE = JSON);
+    """}
+}

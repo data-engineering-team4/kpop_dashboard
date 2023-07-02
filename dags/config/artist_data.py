@@ -1,4 +1,9 @@
-USE SCHEMA raw;
+{
+    'schema': 'raw',
+    'table': 'artist_data',
+    'sqls': {
+        'load': """
+            USE SCHEMA raw;
             CREATE or replace STAGE raw_data_stage
                 STORAGE_INTEGRATION = s3_int
                 URL = 's3://kpop-analysis/raw_data/';
@@ -33,3 +38,5 @@ USE SCHEMA raw;
                 FROM '@raw_data_stage/spotify/api/artists/{ymd}/'
                 )
             FILE_FORMAT = (TYPE = JSON);
+    """}
+}
