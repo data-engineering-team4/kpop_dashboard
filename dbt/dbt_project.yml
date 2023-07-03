@@ -39,6 +39,14 @@ models:
     - name: src_matched_ids
       materialized: ephemeral
   analytics:
+    - name: country_weekly_chart
+      materialized: table
+    - name: global_weekly_chart
+      materialized: table
+    - name: global_weekly_chart
+      materialized: table
+    - name: kpop_artist
+      materialized: table
     - name: kpop_summary
       materialized: table
       depends_on:
