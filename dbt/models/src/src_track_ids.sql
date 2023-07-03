@@ -1,2 +1,2 @@
 SELECT id
-FROM dev.raw.track_data
+FROM {{ source('dev', 'track_data') }}
