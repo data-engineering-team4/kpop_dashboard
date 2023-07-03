@@ -2,6 +2,7 @@ import os
 import glob
 import requests
 import logging
+import pendulum
 
 def exists(path):
     """
@@ -120,6 +121,7 @@ def get_sql(table_name, sql_name, **params):
 
     return sql
 
+
 def get_sql_from_file(file_path):
     with open(file_path, 'r') as file:
         return file.read()  
@@ -139,3 +141,17 @@ def get_table_info(table_name, key):
     table_confs = load_all_jsons_into_list("/opt/airflow/dags/config")
     table = find(table_name, table_confs)
     return table[key]
+
+
+def get_current_datetime():
+    local_tz = pendulum.timezone("Asia/Seoul")
+    now = pendulum.now(tz=local_tz)
+    return now
+
+def get_formatted_date(now):
+    ymd = now.strftime('%Y-%m-%d')
+    return ymd
+
+def get_formatted_timestamp(now):
+    timestamp = now.strftime('%Y-%m-%d_%H:%M:%S')
+    return timestamp
