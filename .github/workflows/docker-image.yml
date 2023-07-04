@@ -33,7 +33,3 @@ jobs:
 
     - name: Image digest
       run: echo ${{ steps.docker_build.outputs.digest }}
-
-    - name: Run Docker container and list DAGs
-      run: |
-        docker run --rm kpopdocker/kpop-airflow:latest ls -l /opt/airflow/dags 
