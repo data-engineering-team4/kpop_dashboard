@@ -60,6 +60,7 @@ def get_data(url, headers, params):
             logging.info(f"Retrying after {retry_after} seconds.")
             time.sleep(retry_after)
             return get_data(url, headers, params)
+        
     elif status_code != 200:
         logging.info("200도 아니고 429도 아닌", status_code)
 
