@@ -29,12 +29,13 @@ clean-targets: # directories to be removed by `dbt clean`
 # directory as views. These settings can be overridden in the individual model
 # files using the `{{ config(...) }}` macro.
 models:
-  +materialized: view
-  analytics:
-    +materialized: table
-  dim:
-    +materialized: table
-  fact:
-    +materialized: table
-  src:
-    +materialized: ephemeral
+  kpop:
+    +materialized: view
+    analytics:
+      +materialized: table
+    fact:
+      +materialized: table
+    dim:
+      +materialized: table
+    src:
+      +materialized: ephemeral
