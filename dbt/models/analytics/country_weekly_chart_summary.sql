@@ -1,6 +1,7 @@
-WITH source_data AS (
-    SELECT rank,track_id,track_name,artist_names,streams,country_code,chart_date
-    FROM dev.raw.country_weekly_chart
+-- Dashboard #1
+WITH chart AS (
+    SELECT * FROM {{ ref("src_country_weekly_chart") }}
 )
 SELECT *
-FROM source_data
+FROM chart
+WHERE chart.chart_date >= DATEADD(year, -1, CURRENT_DATE())

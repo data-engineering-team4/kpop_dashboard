@@ -6,6 +6,10 @@ sources:
     database: dev
     schema: raw
     tables:
+      - name: artist_data
       - name: track_data
-      - name: country_weekly_chart
       - name: audio_data
+      - name: country_weekly_chart
+      - name: global_weekly_chart
+      - name: global_yearly_chart
+      - name: global_famous_audio_data

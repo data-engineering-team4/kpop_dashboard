@@ -1,6 +1,7 @@
-WITH source_data AS (
-    SELECT rank, track_id, track_name, artist_names, streams, chart_date
-    FROM dev.raw.global_yearly_chart
+-- Dashboard #1
+WITH chart AS (
+    SELECT * FROM {{ ref("src_global_yearly_chart") }}
 )
 SELECT *
-FROM source_data
+FROM chart
+WHERE chart.chart_date >= DATEADD(year, -6, CURRENT_DATE())
