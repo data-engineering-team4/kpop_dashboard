@@ -8,8 +8,8 @@ from datetime import datetime
 
 from airflow import DAG
 from airflow.models import Variable
-from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import PythonOperator
 from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
 from airflow.utils.task_group import TaskGroup
 
@@ -259,8 +259,8 @@ def create_snowflake_operator(task_id, file_path):
         on_failure_callback=lambda ti: send_slack_message(ti, success=False)
     )
 
-def create_dummy_operator(task_id):
-    return DummyOperator(
+def create_empty_operator(task_id):
+    return EmptyOperator(
         task_id=task_id,
         dag=dag,
         on_success_callback=lambda ti: send_slack_message(ti, success=True),
@@ -334,7 +334,7 @@ with DAG(
     # load_audio_features_task = create_snowflake_operator('load_audio_features_task', 'audio_data')
     load_audio_features_task = create_snowflake_operator('load_audio_features_task', 'dags/config/audio.sql')
 
-    end_task = create_dummy_operator('end')
+    end_task = create_empty_operator('end')
 
     start_task >> token_task >> scraping_kpop_artist_task
     scraping_kpop_artist_task >> [load_artists_task, scrape_album_group]

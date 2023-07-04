@@ -1,4 +1,8 @@
+import pandas as pd
+import logging
+from itertools import chain
 from datetime import datetime, timedelta
+
 from airflow import DAG
 from airflow.models import Variable
 from airflow.operators.empty import EmptyOperator
@@ -8,14 +12,12 @@ from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
 from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
 from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
 from airflow.exceptions import AirflowFailException
+
 from utils.common_util import get_sql
 from utils.spotify_util import get_data
 from utils.spotify_util import set_access_tokens
 from utils.aws_util import save_json_to_s3
 from utils.aws_util import create_s3_client
-import pandas as pd
-import logging
-from itertools import chain
 
 def _set_tokens():
     client_ids = [
