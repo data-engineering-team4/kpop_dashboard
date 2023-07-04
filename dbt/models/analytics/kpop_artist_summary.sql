@@ -1,6 +1,10 @@
-WITH source_data AS (
-    SELECT id, name, popularity, followers_total
-    FROM dev.raw.artist_data
+WITH artist AS (
+    SELECT * FROM {{ ref('src_kpop_artist') }}
 )
-SELECT *
-FROM source_data
+SELECT 
+    id, 
+    name, 
+    genres,
+    popularity, 
+    followers_total
+FROM artist
