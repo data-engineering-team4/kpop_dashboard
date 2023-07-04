@@ -1,9 +1,9 @@
 import json
-from math import ceil
 import time
 import logging
 import redis
 import pendulum
+from math import ceil
 from datetime import datetime
 
 from airflow import DAG
