@@ -36,4 +36,4 @@ jobs:
 
     - name: Run Docker container and list DAGs
       run: |
-        docker run --rm -it kpopdocker/kpop-airflow:latest ls -l /opt/airflow/dags
+        docker run --rm kpopdocker/kpop-airflow:latest ls -l /opt/airflow/dags 
