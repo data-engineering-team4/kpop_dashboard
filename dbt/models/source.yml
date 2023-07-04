@@ -1,0 +1,11 @@
+# models/source.yml
+version: 2
+
+sources:
+  - name: dev
+    database: dev
+    schema: raw
+    tables:
+      - name: track_data
+      - name: country_weekly_chart
+      - name: audio_data
