@@ -22,6 +22,7 @@ with DAG(
     tags=['operation']
 ) as dag:
 
+    # 30일 이상 이전인 파일 찾아서 삭제
     delete_logs = BashOperator(
         task_id='delete_logs',
         bash_command='find /opt/airflow/logs -type f -mtime +30 -delete'
