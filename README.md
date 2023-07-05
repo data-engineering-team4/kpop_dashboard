@@ -49,9 +49,43 @@ Spotify, Reddit API를 활용해서 얻은 대량의 데이터를 Amazon S3에 �
 
 ## 📦 Features
 ### Data Pipeline
-* 
-*
-*
+
+**✔️ Spotify Data ETL**
+<img width="1181" alt="스크린샷 2023-07-06 오전 2 13 18" src="https://github.com/data-engineering-team4/kpop_dashboard/assets/79040336/8fdb3485-884a-4abb-841c-12c8f492fe4f">
+
+Spotify API를 사용하여 K-pop 아티스트, 앨범, 트랙 데이터를 스크래핑하여 S3에 저장하고, 이후 Snowflake에 적재합니다.
+
+
+**✔️ Spotify chart ETL**
+
+![스크린샷 2023-07-06 오전 2 11 45](https://github.com/data-engineering-team4/kpop_dashboard/assets/79040336/23a61a67-fd23-482e-99e7-5c6fbb5b7aac)
+
+Spotify의 주간 및 연간 차트 데이터를 웹 스크래핑하여 전처리한 후 S3에 저장하고, Snowflake에 로드하는 작업을 자동화했습니다.
+
+
+**✔️ Reddit Data ETL**
+![스크린샷 2023-07-06 오전 2 15 44](https://github.com/data-engineering-team4/kpop_dashboard/assets/79040336/4bb9e0a9-fcb0-4e93-ad92-43faf560172e)
+
+
+Reddit에서 포스트와 댓글 데이터를 수집하여 CSV 파일로 저장하고, S3에 업로드한 후 Snowflake에 로드하는 작업을 Airflow로 자동화했습니다.
+
+
+**✔️ delete log DAG**
+
+<img width="772" alt="스크린샷 2023-07-06 오전 2 15 58" src="https://github.com/data-engineering-team4/kpop_dashboard/assets/79040336/7fedc8b5-4588-4de2-a6f4-cd99da9384eb">
+
+
+Airflow 운영 기간 동안 누적된 Tasks log 용량 관리를 위해 매일 오전 2시에 30일 이상된 로그 파일을 자동으로 삭제하는 작업을 수행합니다.
+
+
+**✔️ dbt run DAG**
+
+<img width="433" alt="스크린샷 2023-07-06 오전 2 16 16" src="https://github.com/data-engineering-team4/kpop_dashboard/assets/79040336/de74b418-b2dd-41d5-b608-a22f2eb3b393">
+
+
+DBT(Data Build Tool)를 사용하여 데이터 변환 작업을 실행합니다.
+
+---
 
 ### Dashboard
 * 1년간 글로벌 스트리밍 현황을 분석합니다.
