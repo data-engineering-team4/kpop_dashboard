@@ -14,6 +14,7 @@
     <img src="https://img.shields.io/badge/Reddit-FF4500?style=for-the-badge&logo=Reddit&logoColor=white">
     <img src="https://img.shields.io/badge/Airflow-017CEE?style=for-the-badge&logo=Apache%20Airflow&logoColor=white">
     <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white">
+    <br />
     <img src="https://img.shields.io/badge/dbt-FF694B?style=for-the-badge&logo=dbt&logoColor=white">
     <img src="https://img.shields.io/badge/tableau-E97627?style=for-the-badge&logo=tableau&logoColor=white">
     <img src="https://img.shields.io/badge/amazon aws-232F3E?style=for-the-badge&logo=amazonaws&logoColor=white">
@@ -73,6 +74,12 @@ Spotify, Reddit API를 활용해서 얻은 대량의 데이터를 Amazon S3에 �
 <img width="900" alt="image" src="https://github.com/learn-programmers/KDT_DATA_1st/assets/103317018/4cfc3924-3a08-4a3d-aa12-1d253098f487">
 
 ### 7) Reddit의 K-pop 관련 게시물과 댓글 데이터 WordCloud
+Reddit K-pop 관련 게시물 데이터 WordCloud
+![posts_wordcloud](https://github.com/data-engineering-team4/kpop_dashboard/assets/79040336/589f020f-36a3-4684-bb6b-466ceb35108a)
+
+Reddit K-pop 관련 댓글 데이터 WordCloud
+![comments_wordcloud](https://github.com/data-engineering-team4/kpop_dashboard/assets/79040336/0eeee9c9-9d08-46ed-8745-446f23b04597)
+
 
 
 ## 🎥 View Demo
