@@ -2,9 +2,6 @@
 
 <!-- PROJECT LOGO -->
 <br />
-<div align="center">
-  <img width="900" alt="image" src="https://github.com/learn-programmers/KDT_DATA_1st/assets/103317018/23950954-0bc2-46b0-8fea-0e3888e96a03">
-
   <h1 align="center">Spotify API를 이용한 K-POP 인기 탐색 분석 대시보드</h1>
   <p align="center">
     Tableau를 이용한 K-POP 인기 탐색 분석
@@ -48,11 +45,20 @@ Spotify, Reddit API를 활용해서 얻은 대량의 데이터를 Amazon S3에 �
 </table>
 
 ## 🔎 프로젝트 구조
+![image](https://github.com/data-engineering-team4/kpop_dashboard/assets/103317018/de5ecc94-65ca-4b08-a128-b41acc09a568)
 
 ## 📦 Features
-* Spotify Api를 사용하여 Track, Album, Artist등을 포함한 음악 데이터를 수집하고 1년간 글로벌 스트리밍 현황을 분석합니다.
+### Data Pipeline
+* 
+*
+*
+
+### Dashboard
+* 1년간 글로벌 스트리밍 현황을 분석합니다.
 * K-POP 트랙과 아티스트에 대한 국가별 선호도 및 오디오 특성을 분석합니다.
 * K-POP 그룹별 차트 순위와 추이를 보여주고, 오디오 특성을 비교합니다.
+* Reddit 사용자들의 K-POP 관련 게시물과 댓글의 반응을 분석합니다.
+
 
 ## 📊 Charts
 ### 1) Spotify Global 최근 1년 스트리밍 현황 
