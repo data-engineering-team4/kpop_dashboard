@@ -15,10 +15,10 @@ default_args = {
     'catchup': False
 }
 
-with DAG('dbt_test_dag', schedule_interval='@once', default_args=default_args, tags=['example']) as dag:
+with DAG('dbt_run_dag', schedule_interval='@once', default_args=default_args, tags=['dbt']) as dag:
 
     task_1 = BashOperator(
-        task_id='daily_transform',
+        task_id='run_dbt',
         bash_command='cd /dbt && dbt run --profiles-dir .',
         env={
             'DBT_ENV_SECRET_USER': '{{ var.value.dbt_user }}',
