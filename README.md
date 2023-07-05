@@ -23,12 +23,12 @@
 
 <!-- ABOUT THE PROJECT -->
 ## 📋 About The Project
-* **기간** : 5/29(월) ~ 6/2(금)
-* **목표** : 데이터 웨어하우스 구축 및 대시보드 활용을 통해 수집되는 데이터에 대한 관리와 시각화 방법에 대해 알아보며 데이터 엔지니어링 기술 역량 강화에 필요한 지식 습득
-* **주제** : 데이터 웨어하우스를 이용한 대시보드 구성
-Spotify API를 활용해서 얻은 대량의 데이터를 Amazon S3에 저장하고 
-Amazon Redshift Serverless 에 데이터를 로드하였습니다. 
-이렇게 구축한 환경을 활용하여 K-POP 인기 탐색 분석을 Tableau로 대시보드를 제작하여 데이터 시각화를 했습니다.
+* **기간** : 6/26(월) ~ 6/30(금)
+* **목표** : 이전에 진행했던 대시보드 프로젝트의 데이터 파이프라인을 구축한 고도화 프로젝트 진행
+* **주제** : End-to-end 데이터 파이프라인 구성하기
+
+Spotify, Reddit API를 활용해서 얻은 대량의 데이터를 Amazon S3에 저장하고, 이후에 Snowflake에 데이터를 로드하였습니다. </br>
+또한 DBT를 사용하여 데이터를 가공하고 이 과정을 Airflow 워크플로우로 관리하였습니다. 이렇게 구축한 환경을 활용하여 K-POP 인기 탐색 분석을 Tableau로 대시보드를 제작하여 데이터 시각화를 했습니다.
 
 <!-- CONTACT -->
 ## 👥 Contact
@@ -46,9 +46,7 @@ Amazon Redshift Serverless 에 데이터를 로드하였습니다.
   </tbody>
 </table>
 
-### Project Link
-https://prod-apnortheast-a.online.tableau.com/#/site/spotifykpopanalysis/workbooks/996150?:origin=card_share_link
-
+## 🔎 프로젝트 구조
 
 ## 📦 Features
 * Spotify Api를 사용하여 Track, Album, Artist등을 포함한 음악 데이터를 수집하고 1년간 글로벌 스트리밍 현황을 분석합니다.
@@ -74,8 +72,12 @@ https://prod-apnortheast-a.online.tableau.com/#/site/spotifykpopanalysis/workboo
 ### 6) K-pop 아티스트 콜라보레이션 네트워크
 <img width="900" alt="image" src="https://github.com/learn-programmers/KDT_DATA_1st/assets/103317018/4cfc3924-3a08-4a3d-aa12-1d253098f487">
 
+### 7) Reddit의 K-pop 관련 게시물과 댓글 데이터 WordCloud
+
+
 ## 🎥 View Demo
 [![Spotify API를 이용한 K-POP 인기 탐색 분석 대시보드](https://img.youtube.com/vi/J-N1ytzZilU/0.jpg)](https://www.youtube.com/watch?v=J-N1ytzZilU)
+
 
 
 
