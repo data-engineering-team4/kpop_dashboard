@@ -5,6 +5,7 @@
                 URL = 's3://kpop-analysis/raw_data/';
             CREATE OR REPLACE TABLE track_data (
                 artists VARIANT
+                , album_id VARCHAR
                 , available_markets ARRAY
                 , disc_number INTEGER
                 , duration_ms INTEGER
@@ -23,6 +24,7 @@
             FROM (
                 SELECT
                     $1:artists,
+                    $1:album_id,
                     $1:available_markets,
                     $1:disc_number,
                     $1:duration_ms,

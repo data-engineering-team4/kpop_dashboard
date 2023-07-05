@@ -1,20 +1,23 @@
-from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
-from datetime import datetime
-from airflow.models import Variable
-from airflow.utils.task_group import TaskGroup
-from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
-from airflow.operators.dummy_operator import DummyOperator
 import json
-from math import ceil
 import time
 import logging
 import redis
+import pendulum
+from math import ceil
+from datetime import datetime
+
+from airflow import DAG
+from airflow.models import Variable
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import PythonOperator
+from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
+from airflow.utils.task_group import TaskGroup
+
+from utils.common_util import get_sql, get_sql_from_file
 from utils.slack_util import SlackAlert
 from utils.spotify_util import set_access_tokens, get_data
 from utils.aws_util import save_json_to_s3, create_s3_client
-from utils.common_util import get_sql, get_sql_from_file
-import pendulum
+
 
 # timezone 설정
 local_tz = pendulum.timezone("Asia/Seoul")
@@ -152,20 +155,23 @@ def scraping_track(ti, num_partitions, partition_index):
     s3_client = create_s3_client('aws_conn_id')
 
     for i in range(start_index, end_index, 20):
+        target_album_list = album_list[i:i + 20] # 요청할 앨범 ID 대상 리스트
         params = {
             "offset": 0,
             "limit": 50,
-            "ids": ','.join(album_list[i:i + 20])
+            "ids": ','.join(target_album_list)
         }
         status_code, data = get_data(several_albums_url, headers=headers, params=params)
         if status_code == 200:
-            for album in data['albums']:
+            for album_idx, album in enumerate(data['albums']):
                 try:
                     for track in album['tracks']['items']:
+                        track["album_id"] = target_album_list[album_idx] # album_ID 
                         save_json_to_s3(track, s3_bucket, "tracks", ymd, str(track['id']),s3_client)
                         track_id_list.append(track["id"])
                 except Exception:
                     logging.error("error")
+
 
     redis_conn.set(f'track_id_list_{partition_index}', json.dumps(track_id_list))
 
@@ -253,8 +259,8 @@ def create_snowflake_operator(task_id, file_path):
         on_failure_callback=lambda ti: send_slack_message(ti, success=False)
     )
 
-def create_dummy_operator(task_id):
-    return DummyOperator(
+def create_empty_operator(task_id):
+    return EmptyOperator(
         task_id=task_id,
         dag=dag,
         on_success_callback=lambda ti: send_slack_message(ti, success=True),
@@ -328,7 +334,7 @@ with DAG(
     # load_audio_features_task = create_snowflake_operator('load_audio_features_task', 'audio_data')
     load_audio_features_task = create_snowflake_operator('load_audio_features_task', 'dags/config/audio.sql')
 
-    end_task = create_dummy_operator('end')
+    end_task = create_empty_operator('end')
 
     start_task >> token_task >> scraping_kpop_artist_task
     scraping_kpop_artist_task >> [load_artists_task, scrape_album_group]

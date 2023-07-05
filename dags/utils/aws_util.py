@@ -1,10 +1,12 @@
 import json
-from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 import boto3
+
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.hooks.base_hook import BaseHook
 
 def save_json_to_s3(data, s3_bucket, key, ymd, id, s3_client):
     s3_key = f"raw_data/spotify/api/{key}/{ymd}/{id}.json"
+    
     if data is None:
         data = []
 

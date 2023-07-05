@@ -1,11 +1,14 @@
+import os
+import logging
 from datetime import datetime
+
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from operators.log_operator import LogOperator
 from airflow.operators.bash import BashOperator
+
 from utils.common_util import get_sql
-import logging
-import os
+
 
 default_args = {
     'start_date': datetime(2023, 6, 30),
