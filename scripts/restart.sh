@@ -2,7 +2,7 @@
 
 # 변수 선언
 IMAGE_NAME="kpopdocker/kpop-airflow:latest"
-COMPOSE_FILE_PATH="/home/ubuntu/kpop_dashboard/docker-compose.yml"
+COMPOSE_FILE_PATH="/home/ubuntu/kpop_dashboard/docker-compose.yaml"
 
 # Docker 이미지를 pull 해옵니다.
 echo "Pulling latest image..."
