@@ -1,4 +1,15 @@
+import os
+import time
+import logging
+import pandas as pd
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+
 from airflow import DAG
+from airflow.models import Variable
 from airflow.operators.python import PythonOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
@@ -7,21 +18,8 @@ from operators.delete_files_operator import DeleteFilesOperator
 from airflow.exceptions import AirflowFailException
 from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
 from airflow.utils.task_group import TaskGroup
-from airflow.models import Variable
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-import time
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
-import logging
-import os
-import pandas as pd
-from utils.common_util import get_files
-from utils.common_util import delete_files
-from utils.common_util import save_files
-from utils.common_util import get_sql
-from utils.common_util import exists
-from utils.common_util import get_table_info
+
+from utils.common_util import get_files, delete_files, save_files, get_sql, exists, get_table_info
 from utils.spotify_util import check_and_restart_selenium
 
 def _get_csv_files(table_name, date, file_directory, file_pattern):

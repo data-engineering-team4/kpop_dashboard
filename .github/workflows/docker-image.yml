@@ -30,6 +30,7 @@ jobs:
         context: .
         push: true
         tags: kpopdocker/kpop-airflow:latest
+        platforms: linux/amd64,linux/arm64
 
     - name: Image digest
       run: echo ${{ steps.docker_build.outputs.digest }}
