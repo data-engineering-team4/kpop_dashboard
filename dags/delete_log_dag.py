@@ -1,10 +1,7 @@
-import pendulum
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.bash import BashOperator # Import BashOperator
-
-"""Set DAG"""
-KST_TZ = pendulum.timezone("Asia/Seoul")
+from utils.common_util import KST_TZ
 
 default_args = {
     'owner': 'kpop',
@@ -13,19 +10,18 @@ default_args = {
 }
 
 with DAG(
-    dag_id='delete_logs_mtime_30', 
+    dag_id='delete_logs_past_7days', 
     default_args=default_args,
     start_date=datetime(2023, 7, 1, tzinfo=KST_TZ), 
     catchup=False, 
     schedule_interval='* 2 * * *',  # Crontime : min hour day month week / 매일 02시에 삭제
-    max_active_runs=3,
     tags=['operation']
 ) as dag:
 
-    # 30일 이상 이전인 로그 파일 찾아서 삭제
+    # 7일 이상 이전인 로그 파일 찾아서 삭제
     delete_logs = BashOperator(
         task_id='delete_logs',
-        bash_command='find /opt/airflow/logs -type f -mtime +30 -delete'
+        bash_command='find /opt/airflow/logs -type f -mtime +7 -delete'
     )
 
     delete_logs
