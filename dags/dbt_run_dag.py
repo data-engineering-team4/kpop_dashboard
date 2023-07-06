@@ -3,17 +3,15 @@ import logging
 from datetime import datetime
 from airflow import DAG
 from airflow.operators.bash import BashOperator
-from utils.common_util import KST_TZ
-
 
 default_args = {
-    'start_date': datetime(2023, 6, 30,tzinfo=KST_TZ),
+    'start_date': datetime(2023, 6, 30),
     'catchup': False
 }
 
 with DAG(
     dag_id='dbt_run_dag', 
-    schedule_interval='0 15 * * 0', 
+    schedule_interval='0 0 * * 0', 
     default_args=default_args, 
     tags=['dbt']
 ) as dag:
