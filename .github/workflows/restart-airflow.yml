@@ -1,0 +1,22 @@
+name: Run Script on EC2
+
+on:
+  push:
+    branches: [ main ]
+  # schedule:
+  #   - cron: '0 15 * * 6' # 한국시간 기준으로 매주 일요일 자정마다 실행
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Execute script
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.REMOTE_HOST }}
+        username: ${{ secrets.REMOTE_USER }}
+        key: ${{ secrets.REMOTE_SSH_KEY }}
+        script: |
+          cd /home/ubuntu/kpop_dashboard/scripts
+          chmod +x restart.sh
+          bash restart.sh

@@ -271,11 +271,10 @@ with DAG(
     dag_id = 'kpop_artist_album_track_extraction',
     start_date = datetime(2023,6,26),
     catchup=False,
-    tags=['example'],
     schedule_interval=None,
 ) as dag:
 
-    start_task = create_dummy_operator('start')
+    start_task = create_empty_operator('start')
 
     token_task = create_python_operator('token', token)
 

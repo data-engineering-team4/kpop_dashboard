@@ -12,7 +12,7 @@ default_args = {
     'catchup': False
 }
 
-with DAG('sql_test_dag', schedule_interval='@once', default_args=default_args, tags=['example']) as dag:
+with DAG('sql_test_dag', schedule_interval='@once', default_args=default_args, tags=['test']) as dag:
     sql = get_sql('country_weekly_chart', 'load_sql', date='{{ds}}', target_file_pattern='country-weekly-2023-06-30.csv')
 
     log_test = LogOperator(
